@@ -111,7 +111,7 @@ class taskBubbleMsg:
         self.contents.clear()
         return messages
     
-    def create_msg(contents):
+    def create_msg(self,contents):
         json = {
         "type": "flex",
         "altText": "リマインダー",
