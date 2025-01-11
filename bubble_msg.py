@@ -1,11 +1,4 @@
-def createMsg(contents):
-    return {
-      "type": "flex",
-      "altText": "リマインダー",
-      "contents":{
-      "type": "carousel",
-      "contents": contents}       
-    }
+from linebot.models import FlexSendMessage
 class taskBubbleMsg:
     """締切りタスクのバブルメッセージを作成するクラス
     """
@@ -119,11 +112,13 @@ class taskBubbleMsg:
         return messages
     
     def create_msg(contents):
-        return {
+        json = {
         "type": "flex",
         "altText": "リマインダー",
         "contents":{
         "type": "carousel",
         "contents": contents}       
         }
+        return FlexSendMessage.new_from_json_dict(json)
+
     
