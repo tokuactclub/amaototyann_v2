@@ -6,7 +6,10 @@ import hmac
 
 from linebot import LineBotApi
 from linebot.models import TextSendMessage
+
 from bubble_msg import taskBubbleMsg
+import messages
+
 # ローカル開発の場合.envファイルから環境変数を読み込む
 from dotenv import load_dotenv
 load_dotenv()   
@@ -39,9 +42,11 @@ def lineWebhook():
     request_json = request.get_json()
 
     # ユーザーからのメッセージを取得
-    message = request_json['events'][0]['message']['text']
+    message:str = request_json['events'][0]['message']['text']
 
-    # メッセージがコマンドかどうか判定する
+    if message.startswith("引き継ぎ資料") or message.startswith("引継ぎ資料"):
+        # コマンドに変換
+        message = "ama handover"
     if message.split()[0] != 'ama':
         return # コマンドではない場合何もせずに終了
     
@@ -51,15 +56,17 @@ def lineWebhook():
     
     cmd = message.split()[1:]
     # コマンドの処理
-    if cmd == 'ping':
+    if cmd == 'handover':
         # リプライトークンを用いて返信
-        line_bot_api.reply_message(reply_token, TextSendMessage(text='pong'))
+        line_bot_api.reply_message(
+            reply_token, TextSendMessage(text=messages.HANDOVER)
+        )
     elif cmd == 'hello':
         # リプライトークンを用いて返信
         line_bot_api.reply_message(reply_token, TextSendMessage(text='Hello, World!'))
     else:
         # リプライトークンを用いて返信
-        line_bot_api.reply_message(reply_token, TextSendMessage(text='コマンドが見つかりませんでした'))
+        line_bot_api.reply_message(reply_token, TextSendMessage(text= messages.CMD_ERROR))
 
 
 # プッシュメッセージ送信用のエンドポイント
