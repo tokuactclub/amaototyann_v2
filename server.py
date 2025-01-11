@@ -34,13 +34,32 @@ def lineWebhook():
     if signature != request.headers['X-Line-Signature']:
         return 'Unauthorized', 401
     
-    # リプライトークンを取得
+    # リクエストボディーをJSONに変換
     request_json = request.get_json()
-    reply_token = request_json['events'][0]['replyToken']
 
-    # リプライトークンを用いて返信
+    # ユーザーからのメッセージを取得
+    message = request_json['events'][0]['message']['text']
+
+    # メッセージがコマンドかどうか判定する
+    if message.split()[0] != 'ama':
+        return # コマンドではない場合何もせずに終了
+    
+    # リプライトークンを取得
+    reply_token = request_json['events'][0]['replyToken']
     line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
-    line_bot_api.reply_message(reply_token, TextSendMessage(text='Hello, World!'))
+    
+    cmd = message.split()[1:]
+    # コマンドの処理
+    if cmd == 'ping':
+        # リプライトークンを用いて返信
+        line_bot_api.reply_message(reply_token, TextSendMessage(text='pong'))
+    elif cmd == 'hello':
+        # リプライトークンを用いて返信
+        line_bot_api.reply_message(reply_token, TextSendMessage(text='Hello, World!'))
+    else:
+        # リプライトークンを用いて返信
+        line_bot_api.reply_message(reply_token, TextSendMessage(text='コマンドが見つかりませんでした'))
+
 
 # プッシュメッセージ送信用のエンドポイント
 @app.route('/pushMessage', methods=['POST'])
