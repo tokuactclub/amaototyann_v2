@@ -6,6 +6,7 @@ import hmac
 
 from linebot import LineBotApi
 from linebot.models import TextSendMessage
+from bubble_msg import taskBubbleMsg
 # ローカル開発の場合.envファイルから環境変数を読み込む
 from dotenv import load_dotenv
 load_dotenv()   
@@ -68,9 +69,25 @@ def pushMessage():
     # プッシュメッセージを送信
     request_json = request.get_json()
     target_group_id = request_json['target_group_id']
-    message = request_json['message']
+    msg_type = request_json['msg_type']
+    msg_data = request_json['msg_data']
+
+
 
     line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
-    line_bot_api.push_message(target_group_id, TextSendMessage(text=message))
+
+    # タスクリマインダーの場合バブルメッセージを送信
+    if msg_type == 'task':
+        line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
+        task_bubble_msg = taskBubbleMsg()
+        task_bubble_msg.addReminder(*msg_data) # TODO エディタ上でエラーが出ない程度に適当に書いてる
+        msg = task_bubble_msg.getMessages()
+
+
+
+        line_bot_api.push_message(target_group_id,msg)# TODO msgの指定方法が正しいか不明
+    else: # TODO とりあえず適当にメッセージを送信してる
+        message = "test message"
+        line_bot_api.push_message(target_group_id, TextSendMessage(text=message)) 
 if __name__ == '__main__':
     app.run(debug=True)
