@@ -114,9 +114,16 @@ class taskBubbleMsg:
         Returns:
             list: メッセージのリスト
         """
-        messages = [create_msg(self.contents[i:i+12]) for i in range(0, len(self.contents), 12)]
+        messages = [self.create_msg(self.contents[i:i+12]) for i in range(0, len(self.contents), 12)]
         self.contents.clear()
         return messages
-def create_msg(contents):
-    # ここにメッセージを作成するロジックを実装してください
-    return {"type": "carousel", "contents": contents}
+    
+    def create_msg(contents):
+        return {
+        "type": "flex",
+        "altText": "リマインダー",
+        "contents":{
+        "type": "carousel",
+        "contents": contents}       
+        }
+    
