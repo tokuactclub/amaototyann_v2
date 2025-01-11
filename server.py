@@ -92,9 +92,29 @@ def pushMessage():
 
 
 
-        line_bot_api.push_message(target_group_id,msg)# TODO msgの指定方法が正しいか不明
+        line_bot_api.push_message(target_group_id,msg)
     else: # TODO とりあえず適当にメッセージを送信してる
         message = "test message"
         line_bot_api.push_message(target_group_id, TextSendMessage(text=message)) 
+
+# 動作テスト用エンドポイント
+@app.route("/test")
+def test():
+    line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
+    
+    group_id = os.getenv("TEST_GROUP_ID")
+
+    task_bubble_msg = taskBubbleMsg()
+    task_bubble_msg.addReminder("舞台監督", "foo", "01/10", 4, "台本", "memo", "hoge") # TODO エディタ上でエラーが出ない程度に適当に書いてる
+    msg = task_bubble_msg.getMessages()
+
+
+
+    line_bot_api.push_message(group_id,msg)# TODO msgの指定方法が正しいか不明
+
+
+    return "finish"
+
 if __name__ == '__main__':
     app.run(debug=True)
+    
