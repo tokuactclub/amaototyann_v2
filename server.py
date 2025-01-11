@@ -41,5 +41,17 @@ def lineWebhook():
     # リプライトークンを用いて返信
     line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
     line_bot_api.reply_message(reply_token, TextSendMessage(text='Hello, World!'))
+
+# プッシュメッセージ送信用のエンドポイント
+@app.route('/pushMessage', methods=['POST'])
+def pushMessage():
+    
+    # プッシュメッセージを送信
+    request_json = request.get_json()
+    target_group_id = request_json['target_group_id']
+    message = request_json['message']
+
+    line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
+    line_bot_api.push_message(target_group_id, TextSendMessage(text=message))
 if __name__ == '__main__':
     app.run(debug=True)
