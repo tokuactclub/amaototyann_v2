@@ -46,15 +46,16 @@ def lineWebhook():
 
     if message.startswith("引き継ぎ資料") or message.startswith("引継ぎ資料"):
         # コマンドに変換
-        message = "ama handover"
-    if message.split()[0] != 'ama':
+        message = "!handover"
+
+    if not message.startswith("!"):
         return # コマンドではない場合何もせずに終了
     
     # リプライトークンを取得
     reply_token = request_json['events'][0]['replyToken']
     line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
     
-    cmd = message.split()[1:]
+    cmd = message.split()[0][1:]
     # コマンドの処理
     if cmd == 'handover':
         # リプライトークンを用いて返信
