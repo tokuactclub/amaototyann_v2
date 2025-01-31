@@ -4,6 +4,10 @@ import base64
 import hashlib
 import hmac
 
+import requests
+import time
+import threading
+
 from linebot import LineBotApi
 from linebot.models import TextSendMessage
 
@@ -20,6 +24,33 @@ CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
 # Flaskのインスタンスを作成
 app = Flask(__name__)
 
+# サーバー停止を阻止し常時起動させるスクリプト
+SERVER_BOOT = False
+
+# 定期的にbootエンドポイントにアクセスするスクリプト
+def bootServer():
+    global SERVER_BOOT
+    if SERVER_BOOT:
+        return
+    SERVER_BOOT = True
+
+    # threadsで実行するための処理
+    def inner():
+        while True:
+            url = "https://amaotowebhook.onrender.com/boot"
+            requests.post(url)
+            time.sleep(60 * 5)
+        
+    thread = threading.Thread(target=inner)
+    thread.start()
+
+# サーバーを起動させるためのエンドポイント
+@app.route('/boot', methods=['POST'])
+def boot():
+    print("boot")
+    return "boot"
+
+
 @app.route('/')
 def hello_world():
     return 'Hello, World!'
@@ -27,6 +58,9 @@ def hello_world():
 # lineWebhook用のエンドポイント
 @app.route('/lineWebhook', methods=['POST'])
 def lineWebhook():
+    # 初回起動時にサーバーを常時するスクリプトを起動させる
+    bootServer()
+    
     # リクエストボディーを取得
     body = request.get_data(as_text=True)
     # 署名の検証
@@ -115,6 +149,10 @@ def test():
 
 
     return "finish"
+
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
