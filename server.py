@@ -12,7 +12,7 @@ from linebot import LineBotApi
 from linebot.models import TextSendMessage
 
 from bubble_msg import taskBubbleMsg
-import messages
+from command import command_process
 
 # ローカル開発の場合.envファイルから環境変数を読み込む
 from dotenv import load_dotenv
@@ -29,6 +29,8 @@ SERVER_BOOT = False
 
 # 定期的にbootエンドポイントにアクセスするスクリプト
 def bootServer():
+    """サーバーを起動させ続ける。何度呼び出されても一度だけ処理を行う。
+    """
     global SERVER_BOOT
     if SERVER_BOOT:
         return
@@ -60,9 +62,10 @@ def hello_world():
 def lineWebhook():
     # 初回起動時にサーバーを常時するスクリプトを起動させる
     bootServer()
-    
+
     # リクエストボディーを取得
     body = request.get_data(as_text=True)
+
     # 署名の検証
     hash = hmac.new(CHANNEL_SECRET.encode('utf-8'),
     body.encode('utf-8'), hashlib.sha256).digest()
@@ -78,8 +81,8 @@ def lineWebhook():
     # ユーザーからのメッセージを取得
     message:str = request_json['events'][0]['message']['text']
 
+    # 引継ぎ資料がメッセージに含まれる場合コマンドに変換
     if message.startswith("引き継ぎ資料") or message.startswith("引継ぎ資料"):
-        # コマンドに変換
         message = "!handover"
 
     if not message.startswith("!"):
@@ -87,22 +90,9 @@ def lineWebhook():
     
     # リプライトークンを取得
     reply_token = request_json['events'][0]['replyToken']
-    line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
     
-    cmd = message.split()[0][1:]
-    # コマンドの処理
-    if cmd == 'handover':
-        # リプライトークンを用いて返信
-        line_bot_api.reply_message(
-            reply_token, TextSendMessage(text=messages.HANDOVER)
-        )
-    elif cmd == 'hello':
-        # リプライトークンを用いて返信
-        line_bot_api.reply_message(reply_token, TextSendMessage(text='Hello, World!'))
-    else:
-        # リプライトークンを用いて返信
-        line_bot_api.reply_message(reply_token, TextSendMessage(text= messages.CMD_ERROR))
-
+    # コマンド処理
+    command_process(message, CHANNEL_ACCESS_TOKEN, reply_token)
 
 # プッシュメッセージ送信用のエンドポイント
 @app.route('/pushMessage', methods=['POST'])
