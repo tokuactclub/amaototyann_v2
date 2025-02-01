@@ -73,9 +73,7 @@ class Commands(object):
                 GAS_URL,
                 json={"cmd":"practice"},
                 )
-            events = response.text
-            events = json.loads(events)
-            print(type(events), events)
+            events = response.json()
             events = map(
                 lambda x: messages.PRACTICE.format(x["place"], x["start"], x["end"], x["memo"]),
                 events
@@ -83,7 +81,7 @@ class Commands(object):
             events = list(events)
             print(events)
             if len(events)>0:
-                self._reply_text_message(events.join("\n\n"))
+                self._reply_text_message("\n\n".join(events))
             else:
                 self._reply_text_message("今日の練習はありません")
         except Exception as e:
@@ -95,9 +93,7 @@ class Commands(object):
                 GAS_URL,
                 json={"cmd":"reminder"},
                 )
-            events = response.text
-            events = json.loads(events)
-            print(type(events), events)
+            events = response.json()
             # リマインダー対象のイベントを取得
             result_events = []
             for event in events:
@@ -106,8 +102,7 @@ class Commands(object):
                     continue
 
                 # 日時の差分を計算
-                day_difference = self._calculate_date_difference(event["date"])
-                print(f"day_difference: {day_difference}")
+                day_difference = self._calculate_date_difference( event["date"])
                 if day_difference < 0:
                     continue
 
@@ -115,10 +110,8 @@ class Commands(object):
                 if str(day_difference) in event["remindDate"].split(","):
                     # dateをMM/DDに変換
                     event["date"] = datetime.fromisoformat(event["date"].rstrip("Z")).strftime("%m/%d")
-                    print(f"date: {event['date']}")
                     event["last_days"] = day_difference
                     result_events.append(event)
-            print(result_events)
             # バブルメッセージを作成
             msg_task = taskBubbleMsg()
             for event in result_events:
@@ -147,7 +140,7 @@ class Commands(object):
                 self.reply_token, TextSendMessage(text=text)
             )
     
-    def _calculate_date_difference(iso_datetime: str, tz_offset_hours: int = 0):
+    def _calculate_date_difference(self, iso_datetime: str, tz_offset_hours: int = 0):
         """指定の日時と現在の日時の差分を計算する
 
         Args:
@@ -157,7 +150,7 @@ class Commands(object):
         Returns:
             _type_: 日数の差分
         """
-        assert type(iso_datetime) == str, "iso_datetime must be str"
+        assert type(iso_datetime) == str, f"iso_datetime must be str, but got {type(iso_datetime)}"
         # ISO 8601 の日時文字列を UTC の datetime に変換
         dt = datetime.fromisoformat(iso_datetime.rstrip("Z")).replace(tzinfo=timezone.utc)
 
