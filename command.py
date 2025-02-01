@@ -55,7 +55,7 @@ class Commands(object):
         if cmd == 'help':
             self._send_text_message(messages.HELP)
 
-        elif cmd == 'change_group':
+        elif cmd == 'changeGroup':
             self._change_group()
             
         elif cmd == 'reminder':
