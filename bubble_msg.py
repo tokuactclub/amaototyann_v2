@@ -81,7 +81,7 @@ class taskBubbleMsg:
                                 "action": {
                                     "type": "message",
                                     "label": "終わりました！",
-                                    "text": f"ama finish {id}"
+                                    "text": f"!finish {id}"
                                 }
                             },
                             {

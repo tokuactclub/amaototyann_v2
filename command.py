@@ -37,7 +37,8 @@ class Commands(object):
         Args:
             cmd (str): !から始まるコマンド
         """
-        cmd = cmd.split()[0][1:] # !を取り除く
+        commands = cmd.split()
+        cmd = commands[0][1:] # !を取り除く
         if cmd == 'help':
             self._reply_text_message(messages.HELP)
 
@@ -63,6 +64,8 @@ class Commands(object):
             )
         elif cmd == 'hello':
             self._reply_text_message('Hello, World!')
+        elif cmd == 'finish':
+            self._finish_event(id=commands[1])
         else:
             self._reply_text_message(messages.CMD_ERROR)
 
@@ -132,6 +135,20 @@ class Commands(object):
         except Exception as e:
             print(e)
 
+    def _finish_event(self, id):
+        try:
+            response = requests.post(
+                GAS_URL,
+                json={"cmd":"finish","id":id},
+                )
+            task_name = response.text
+            if task_name != "error":
+                self._reply_text_message(f"{task_name}の通知を終わるよ！")
+            else:
+                self._reply_text_message("エラーで通知を終われなかったよ！ごめんね！")
+        except Exception as e:
+            print(e)
+    
     def _reply_text_message(self, text):
         if self.debug:
             print(text)
