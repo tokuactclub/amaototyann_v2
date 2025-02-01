@@ -70,8 +70,8 @@ def lineWebhook():
     request_json = request.get_json()
 
 
-    # リクエストボディーを取得
-    body = request["body"]
+    # リクエストボディーテキストとして取得
+    body = request.get_data()
 
     # 署名の検証
     hash = hmac.new(CHANNEL_SECRET.encode('utf-8'),
