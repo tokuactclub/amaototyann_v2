@@ -4,6 +4,7 @@ import messages
 import requests
 from pprint import pprint
 from datetime import datetime, timezone, timedelta
+import json
 
 from bubble_msg import taskBubbleMsg
 GAS_URL = "https://script.google.com/macros/s/AKfycby8acn6-HFL9snjXpYp1bK8S8Ju7w6WR4la6znsMjJNpvsDLSnZl0D-UtyfG2P_o1JL/exec"
@@ -68,7 +69,8 @@ class Commands(object):
                 GAS_URL,
                 json={"cmd":"practice"},
                 )
-            events = response.json()
+            events = response.text
+            events = json.loads(events)
             print(type(events), events)
             events = map(
                 lambda x: messages.PRACTICE.format(x["place"], x["start"], x["end"], x["memo"]),
@@ -89,7 +91,8 @@ class Commands(object):
                 GAS_URL,
                 json={"cmd":"reminder"},
                 )
-            events = response.json()
+            events = response.text
+            events = json.loads(events)
             print(type(events), events)
             # リマインダー対象のイベントを取得
             result_events = []
