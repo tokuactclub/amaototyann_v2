@@ -90,7 +90,7 @@ class Commands(object):
                 json={"cmd":"reminder"},
                 )
             events = response.json()
-            print(events)
+            print(type(events), events)
             # リマインダー対象のイベントを取得
             result_events = []
             for event in events:
@@ -147,6 +147,7 @@ class Commands(object):
         Returns:
             _type_: 日数の差分
         """
+        assert type(iso_datetime) == str, "iso_datetime must be str"
         # ISO 8601 の日時文字列を UTC の datetime に変換
         dt = datetime.fromisoformat(iso_datetime.rstrip("Z")).replace(tzinfo=timezone.utc)
 
