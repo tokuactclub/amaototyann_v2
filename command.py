@@ -169,7 +169,7 @@ class Commands(object):
         result = requests.post(
             GAS_URL,
             json={
-                "cmd":"change_group",
+                "cmd":"changeGroup",
                 "options":{
                     "id":group_id,
                     "groupName":group_name
