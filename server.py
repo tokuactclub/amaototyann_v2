@@ -12,7 +12,7 @@ from linebot import LineBotApi
 from linebot.models import TextSendMessage
 
 from bubble_msg import taskBubbleMsg
-from command import command_process
+from .command import command_process
 
 # ローカル開発の場合.envファイルから環境変数を読み込む
 from dotenv import load_dotenv
