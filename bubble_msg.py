@@ -107,11 +107,11 @@ class taskBubbleMsg:
         Returns:
             list: メッセージのリスト
         """
-        messages = [self.create_msg(self.contents[i:i+12]) for i in range(0, len(self.contents), 12)]
+        messages = [self._create_msg(self.contents[i:i+12]) for i in range(0, len(self.contents), 12)]
         self.contents.clear()
         return messages
     
-    def create_msg(self,contents):
+    def _create_msg(self,contents):
         json = {
         "type": "flex",
         "altText": "リマインダー",
