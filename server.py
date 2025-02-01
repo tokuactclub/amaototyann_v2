@@ -1,8 +1,5 @@
 from flask import Flask, request
 import os
-import base64
-import hashlib
-import hmac
 
 import requests
 import time

@@ -15,9 +15,8 @@ class Commands(object):
             channel_access_token (str): linebotのチャンネルアクセストークン
             reply_token (str): webhookで受け取ったリプライトークン
         """
-        
-        self.line_bot_api = None
-        # self.line_bot_api = LineBotApi(channel_access_token)
+
+        self.line_bot_api = LineBotApi(channel_access_token)
         self.reply_token = reply_token
         
     def process(self, cmd):
@@ -158,7 +157,3 @@ class Commands(object):
         day_difference = (local_date - today).days
 
         return day_difference
-
-
-if __name__ == "__main__":
-    Commands("channel_access_token", "reply_token").process("!reminder")
