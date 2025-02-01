@@ -9,14 +9,22 @@ import json
 from bubble_msg import taskBubbleMsg
 GAS_URL = "https://script.google.com/macros/s/AKfycby8acn6-HFL9snjXpYp1bK8S8Ju7w6WR4la6znsMjJNpvsDLSnZl0D-UtyfG2P_o1JL/exec"
 class Commands(object):
-    def __init__(self,channel_access_token, reply_token, debug=False):
+    def __init__(self,channel_access_token, reply_token = None, debug=False):
         """_summary_
 
         Args:
             channel_access_token (str): linebotのチャンネルアクセストークン
-            reply_token (str): webhookで受け取ったリプライトークン
+            reply_token (str, optional): webhookで受け取ったリプライトークン. 指定すればリプライメッセージとなる。Defaults to None.
             debug (bool, optional): デバッグモードかどうか
         """
+        if reply_token is None:
+            group_info = requests.post(
+                GAS_URL,
+                json={"cmd":"getGroupInfo"}
+                ).json()
+            
+            self.TARGET_GROUP_ID = group_info["id"]
+
         self.debug = debug
         if debug:
             self.line_bot_api = None
@@ -40,7 +48,7 @@ class Commands(object):
         commands = cmd.split()
         cmd = commands[0][1:] # !を取り除く
         if cmd == 'help':
-            self._reply_text_message(messages.HELP)
+            self._send_text_message(messages.HELP)
 
         elif cmd == 'change_group':
             # TODO グループ変更処理
@@ -59,15 +67,14 @@ class Commands(object):
             pass
 
         elif cmd == 'handover':
-            self.line_bot_api.reply_message(
-                self.reply_token, TextSendMessage(text=messages.HANDOVER)
-            )
+            self._send_text_message(messages.HANDOVER)
+
         elif cmd == 'hello':
-            self._reply_text_message('Hello, World!')
+            self._send_text_message('Hello, World!')
         elif cmd == 'finish':
             self._finish_event(id=commands[1])
         else:
-            self._reply_text_message(messages.CMD_ERROR)
+            self._send_text_message(messages.CMD_ERROR)
 
 
     def _practice(self):
@@ -84,9 +91,9 @@ class Commands(object):
             events = list(events)
             print(events)
             if len(events)>0:
-                self._reply_text_message("\n\n".join(events))
+                self._send_text_message("\n\n".join(events))
             else:
-                self._reply_text_message("今日の練習はありません")
+                self._send_text_message("今日の練習はありません")
         except Exception as e:
             print(e)
 
@@ -143,18 +150,33 @@ class Commands(object):
                 )
             task_name = response.text
             if task_name != "error":
-                self._reply_text_message(f"{task_name}の通知を終わるよ！")
+                self._send_text_message(f"{task_name}の通知を終わるよ！")
             else:
-                self._reply_text_message("エラーで通知を終われなかったよ！ごめんね！")
+                self._send_text_message("エラーで通知を終われなかったよ！ごめんね！")
         except Exception as e:
             print(e)
     
-    def _reply_text_message(self, text):
+    def _send_text_message(self, text):
         if self.debug:
             print(text)
+        elif self.reply_token is None:
+            self.line_bot_api.push_message(
+                self.TARGET_GROUP_ID, TextSendMessage(text=text)
+            )
         else:
             self.line_bot_api.reply_message(
                 self.reply_token, TextSendMessage(text=text)
+            )
+    def _send_bubble_message(self, bubble):
+        if self.debug:
+            pprint(bubble)
+        elif self.reply_token is None:
+            self.line_bot_api.push_message(
+                self.TARGET_GROUP_ID, bubble
+            )
+        else:
+            self.line_bot_api.reply_message(
+                self.reply_token, bubble
             )
     
     def _calculate_date_difference(self, iso_datetime: str, tz_offset_hours: int = 0):
