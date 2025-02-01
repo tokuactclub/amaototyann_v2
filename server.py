@@ -15,8 +15,10 @@ from bubble_msg import taskBubbleMsg
 from command import Commands
 
 # ローカル開発の場合.envファイルから環境変数を読み込む
-from dotenv import load_dotenv
-load_dotenv()   
+# IS_RENDER_SERVER が存在しない場合はローカル開発と判断
+if not os.getenv("IS_RENDER_SERVER"):
+    from dotenv import load_dotenv
+    load_dotenv()   
 
 CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')
 CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
