@@ -72,6 +72,9 @@ def lineWebhook():
     # 引継ぎ資料がメッセージに含まれる場合コマンドに変換
     if message.startswith("引き継ぎ資料") or message.startswith("引継ぎ資料"):
         message = "!handover"
+        
+    # 全角の！を半角に変換
+    message.replace("！", "!")
 
     if not message.startswith("!"):
         return "finish", 200
