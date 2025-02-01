@@ -69,7 +69,7 @@ class Commands(object):
                 json={"cmd":"practice"},
                 )
             events = response.json()
-            print(events)
+            print(type(events), events)
             events = map(
                 lambda x: messages.PRACTICE.format(x["place"], x["start"], x["end"], x["memo"]),
                 events
