@@ -68,7 +68,8 @@ def lineWebhook():
 
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
-
+    print(request_json)
+    print(request.headers['X-Line-Signature'])
 
     # リクエストボディーテキストとして取得
     body = request.get_data()
@@ -87,7 +88,6 @@ def lineWebhook():
 
     
 
-    print(request_json)
 
     # ユーザーからのメッセージを取得
     message:str = request_json['events'][0]['message']['text']
