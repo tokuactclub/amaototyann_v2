@@ -82,6 +82,7 @@ class Commands(object):
                 self._reply_text_message("今日の練習はありません")
         except Exception as e:
             print(e)
+
     def _reminder(self):
         try:
             response = requests.post(
@@ -99,6 +100,7 @@ class Commands(object):
 
                 # 日時の差分を計算
                 day_difference = self._calculate_date_difference(event["date"])
+                print(f"day_difference: {day_difference}")
                 if day_difference < 0:
                     continue
 
@@ -106,6 +108,7 @@ class Commands(object):
                 if str(day_difference) in event["remindDate"].split(","):
                     # dateをMM/DDに変換
                     event["date"] = datetime.fromisoformat(event["date"].rstrip("Z")).strftime("%m/%d")
+                    print(f"date: {event['date']}")
                     event["last_days"] = day_difference
                     result_events.append(event)
             print(result_events)

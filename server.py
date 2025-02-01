@@ -74,7 +74,7 @@ def lineWebhook():
         message = "!handover"
         
     # 全角の！を半角に変換
-    message.replace("！", "!")
+    message = message.replace("！", "!")
 
     if not message.startswith("!"):
         return "finish", 200
