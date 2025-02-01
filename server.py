@@ -66,22 +66,26 @@ def lineWebhook():
     # 初回起動時にサーバーを常時するスクリプトを起動させる
     bootServer()
 
-    # # リクエストボディーを取得
-    # body = 
-
-    # # 署名の検証
-    # hash = hmac.new(CHANNEL_SECRET.encode('utf-8'),
-    # body.encode('utf-8'), hashlib.sha256).digest()
-    # signature = base64.b64encode(hash)
-
-    # # リクエストがLINE Platformから送信されたものか検証
-    # if signature != request.headers['X-Line-Signature']:
-    #     print("Unauthorized")
-    #     return 'Unauthorized', 401
-    # print("Authorized")
-    
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
+
+
+    # リクエストボディーを取得
+    body = str(request.get_json())
+
+    # 署名の検証
+    hash = hmac.new(CHANNEL_SECRET.encode('utf-8'),
+    body.encode('utf-8'), hashlib.sha256).digest()
+    signature = base64.b64encode(hash)
+
+    # リクエストがLINE Platformから送信されたものか検証
+    if signature != request.headers['X-Line-Signature']:
+        print("Unauthorized")
+        return 'Unauthorized', 401
+    print("Authorized")
+    
+
+    
 
     print(request_json)
 
@@ -100,6 +104,8 @@ def lineWebhook():
     
     # コマンド処理
     Commands(CHANNEL_ACCESS_TOKEN, reply_token).process(message)
+
+    return "finish", 200
 
 # プッシュメッセージ送信用のエンドポイント
 @app.route('/pushMessage', methods=['POST'])
