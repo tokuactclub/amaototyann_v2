@@ -66,22 +66,24 @@ def lineWebhook():
     # 初回起動時にサーバーを常時するスクリプトを起動させる
     bootServer()
 
-    # リクエストボディーを取得
-    body = request.get_data(as_text=True)
+    # # リクエストボディーを取得
+    # body = 
 
-    # 署名の検証
-    hash = hmac.new(CHANNEL_SECRET.encode('utf-8'),
-    body.encode('utf-8'), hashlib.sha256).digest()
-    signature = base64.b64encode(hash)
+    # # 署名の検証
+    # hash = hmac.new(CHANNEL_SECRET.encode('utf-8'),
+    # body.encode('utf-8'), hashlib.sha256).digest()
+    # signature = base64.b64encode(hash)
 
-    # リクエストがLINE Platformから送信されたものか検証
-    if signature != request.headers['X-Line-Signature']:
-        print("Unauthorized")
-        return 'Unauthorized', 401
-    print("Authorized")
+    # # リクエストがLINE Platformから送信されたものか検証
+    # if signature != request.headers['X-Line-Signature']:
+    #     print("Unauthorized")
+    #     return 'Unauthorized', 401
+    # print("Authorized")
     
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
+
+    print(request_json)
 
     # ユーザーからのメッセージを取得
     message:str = request_json['events'][0]['message']['text']
