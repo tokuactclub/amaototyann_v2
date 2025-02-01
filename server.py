@@ -11,8 +11,6 @@ import threading
 from linebot import LineBotApi
 from linebot.models import TextSendMessage
 
-from logging import getLogger
-
 from bubble_msg import taskBubbleMsg
 from command import Commands
 
@@ -24,9 +22,6 @@ if not os.getenv("IS_RENDER_SERVER"):
 
 CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')
 CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
-
-# loggerの設定
-logger = getLogger(__name__)
 
 # Flaskのインスタンスを作成
 app = Flask(__name__)
@@ -56,7 +51,7 @@ def bootServer():
 # サーバーを起動させるためのエンドポイント
 @app.route('/boot', methods=['POST'])
 def boot():
-    logger.info("boot")
+    print("boot")
     return "boot"
 
 
@@ -67,7 +62,7 @@ def hello_world():
 # lineWebhook用のエンドポイント
 @app.route('/lineWebhook', methods=['POST'])
 def lineWebhook():
-    logger.info("got LINE webhook")
+    print("got LINE webhook")
     # 初回起動時にサーバーを常時するスクリプトを起動させる
     bootServer()
 
@@ -81,9 +76,9 @@ def lineWebhook():
 
     # リクエストがLINE Platformから送信されたものか検証
     if signature != request.headers['X-Line-Signature']:
-        logger.info("Unauthorized")
+        print("Unauthorized")
         return 'Unauthorized', 401
-    logger.info("Authorized")
+    print("Authorized")
     
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
@@ -97,7 +92,7 @@ def lineWebhook():
 
     if not message.startswith("!"):
         return # コマンドではない場合何もせずに終了
-    logger.info("start command process")
+    print("start command process")
     # リプライトークンを取得
     reply_token = request_json['events'][0]['replyToken']
     
