@@ -12,7 +12,7 @@ from linebot import LineBotApi
 from linebot.models import TextSendMessage
 
 from bubble_msg import taskBubbleMsg
-from .command import command_process
+from command import Commands
 
 # ローカル開発の場合.envファイルから環境変数を読み込む
 from dotenv import load_dotenv
@@ -92,7 +92,7 @@ def lineWebhook():
     reply_token = request_json['events'][0]['replyToken']
     
     # コマンド処理
-    command_process(message, CHANNEL_ACCESS_TOKEN, reply_token)
+    Commands(CHANNEL_ACCESS_TOKEN, reply_token).process(message)
 
 # プッシュメッセージ送信用のエンドポイント
 @app.route('/pushMessage', methods=['POST'])
