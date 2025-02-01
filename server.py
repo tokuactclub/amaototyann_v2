@@ -68,27 +68,7 @@ def lineWebhook():
 
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
-    print(request_json)
-    print(request.headers['X-Line-Signature'])
-
-    # リクエストボディーテキストとして取得
-    body = request.get_data()
-
-    # 署名の検証
-    hash = hmac.new(CHANNEL_SECRET.encode('utf-8'),
-    body.encode('utf-8'), hashlib.sha256).digest()
-    signature = base64.b64encode(hash)
-
-    # リクエストがLINE Platformから送信されたものか検証
-    if signature != request.headers['X-Line-Signature']:
-        print("Unauthorized")
-        return 'Unauthorized', 401
-    print("Authorized")
     
-
-    
-
-
     # ユーザーからのメッセージを取得
     message:str = request_json['events'][0]['message']['text']
 
