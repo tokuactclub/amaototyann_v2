@@ -77,7 +77,7 @@ def lineWebhook():
         message = "!handover"
 
     if not message.startswith("!"):
-        return # コマンドではない場合何もせずに終了
+        return "finish", 200
     print("start command process")
     # リプライトークンを取得
     reply_token = request_json['events'][0]['replyToken']
