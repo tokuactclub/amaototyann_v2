@@ -79,12 +79,9 @@ def lineWebhook():
     if not message.startswith("!"):
         return "finish", 200
     print("start command process")
-    # リプライトークンを取得
-    reply_token = request_json['events'][0]['replyToken']
-    print("reply_token:", reply_token)
     
     # コマンド処理
-    Commands(CHANNEL_ACCESS_TOKEN, reply_token).process(message)
+    Commands(CHANNEL_ACCESS_TOKEN, webhook_body= request_json).process(message)
 
     return "finish", 200
 

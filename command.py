@@ -9,15 +9,21 @@ import json
 from bubble_msg import taskBubbleMsg
 GAS_URL = "https://script.google.com/macros/s/AKfycby8acn6-HFL9snjXpYp1bK8S8Ju7w6WR4la6znsMjJNpvsDLSnZl0D-UtyfG2P_o1JL/exec"
 class Commands(object):
-    def __init__(self,channel_access_token, reply_token = None, debug=False):
-        """_summary_
+    def __init__(self,channel_access_token, webhook_body= None, debug=False):
+        """基本的にwebhookのコマンドを処理し、リプライメッセージで応答する。
+        ただし一部関数はwebhookを介さずともpushメッセージにより対応する。
 
         Args:
             channel_access_token (str): linebotのチャンネルアクセストークン
-            reply_token (str, optional): webhookで受け取ったリプライトークン. 指定すればリプライメッセージとなる。Defaults to None.
+            webhook_body (dict): webhookで受け取ったリクエストボディ
             debug (bool, optional): デバッグモードかどうか
         """
-        if reply_token is None:
+
+        if webhook_body is not None:
+            self.webhook_body = webhook_body
+            reply_token = webhook_body['events'][0]['replyToken']
+            self.reply_token = reply_token
+        else:
             group_info = requests.post(
                 GAS_URL,
                 json={"cmd":"getGroupInfo"}
@@ -30,7 +36,6 @@ class Commands(object):
             self.line_bot_api = None
         else:
             self.line_bot_api = LineBotApi(channel_access_token)
-        self.reply_token = reply_token
         
     def process(self, cmd):
         """コマンドを処理する。
@@ -51,10 +56,8 @@ class Commands(object):
             self._send_text_message(messages.HELP)
 
         elif cmd == 'change_group':
-            # TODO グループ変更処理
-            self.line_bot_api.reply_message(
-                self.reply_token, TextSendMessage(text=messages.CHANGE_GROUP)
-            )
+            self._change_group()
+            
         elif cmd == 'reminder':
             self._reminder()
 
@@ -156,6 +159,29 @@ class Commands(object):
         except Exception as e:
             print(e)
     
+    def _change_group(self):
+        group_id = self.webhook_body['events'][0]['source']['groupId']
+        print(f"change group: {group_id}")
+
+        # group_id から lineのapiでgroup_name を取得
+        group_name = self.line_bot_api.get_group_summary(group_id).group_name
+
+        result = requests.post(
+            GAS_URL,
+            json={
+                "cmd":"change_group",
+                "options":{
+                    "id":group_id,
+                    "groupName":group_name
+                }
+            }
+        ).text
+        if result == "error":
+            self._send_text_message("エラーが発生しました")
+            return
+        
+        self._send_text_message(messages.CHANGE_GROUP)
+
     def _send_text_message(self, text):
         if self.debug:
             print(text)
