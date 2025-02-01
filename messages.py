@@ -1,5 +1,4 @@
-HELP = """
-コマンド一覧だよ！
+HELP = """コマンド一覧だよ！
 - !help: このヘルプを表示するよ
 - !change_group: リマインドするグループを送信されたグループに変更するよ
 - !reminder: リマインダーを送るよ
@@ -8,18 +7,14 @@ HELP = """
 - !handover: 引き継ぎ資料のURLを送るよ
 """
 
-CHANGE_GROUP = """
-リマインドするグループを変更したよ！
-"""
-PRACTICE = """
-今日の練習は{place}でします。
+CHANGE_GROUP = "リマインドするグループを変更したよ！"
+PRACTICE = """今日の練習は{place}でします。
 時間は{start_time}〜{end_time}です！遅刻・欠席は連絡をお願いします！
 {memo}
 """
-HANDOVER = """
-あまおとの引き継ぎ資料だよ！
+HANDOVER = """あまおとの引き継ぎ資料だよ！
 Brookの招待URLから招待を受けないとアクセスできないから気をつけて！
 https://scrapbox.io/amaotoHandover/TOP
 """
 
-CMD_ERROR= """コマンドが見つかりませんでした"""
+CMD_ERROR= "コマンドが見つかりませんでした"
