@@ -81,6 +81,7 @@ def lineWebhook():
     print("start command process")
     # リプライトークンを取得
     reply_token = request_json['events'][0]['replyToken']
+    print("reply_token:", reply_token)
     
     # コマンド処理
     Commands(CHANNEL_ACCESS_TOKEN, reply_token).process(message)

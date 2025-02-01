@@ -69,12 +69,13 @@ class Commands(object):
                 json={"cmd":"practice"},
                 )
             events = response.json()
-
+            print(events)
             events = map(
                 lambda x: messages.PRACTICE.format(x["place"], x["start"], x["end"], x["memo"]),
                 events
                 )
             events = list(events)
+            print(events)
             if len(events)>0:
                 self._reply_text_message(events.join("\n\n"))
             else:
@@ -88,7 +89,7 @@ class Commands(object):
                 json={"cmd":"reminder"},
                 )
             events = response.json()
-
+            print(events)
             # リマインダー対象のイベントを取得
             result_events = []
             for event in events:
@@ -107,7 +108,7 @@ class Commands(object):
                     event["date"] = datetime.fromisoformat(event["date"].rstrip("Z")).strftime("%m/%d")
                     event["last_days"] = day_difference
                     result_events.append(event)
-
+            print(result_events)
             # バブルメッセージを作成
             msg_task = taskBubbleMsg()
             for event in result_events:
