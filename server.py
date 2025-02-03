@@ -6,7 +6,6 @@ import time
 import threading
 
 from linebot import LineBotApi
-from linebot.models import TextSendMessage
 
 from bubble_msg import taskBubbleMsg
 from command import Commands
@@ -102,7 +101,12 @@ def pushMessage():
     cmd = request_json['cmd'] # lineWebhookのコマンドと同じ形式 
 
     # コマンド処理
-    Commands(CHANNEL_ACCESS_TOKEN).process(cmd)
+
+    result = Commands(CHANNEL_ACCESS_TOKEN).process(cmd)
+    if result:
+        return "finish", 200
+    else:
+        return "error", 400
 
 # 動作テスト用エンドポイント
 @app.route("/test")

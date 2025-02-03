@@ -78,6 +78,8 @@ class Commands(object):
             self._finish_event(id=commands[1])
         else:
             self._send_text_message(messages.CMD_ERROR)
+            return False
+        return True
 
 
     def _practice(self):
