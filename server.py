@@ -24,17 +24,25 @@ CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
 app = Flask(__name__)
 
 # サーバー停止を阻止し常時起動させるスクリプト
-SERVER_BOOT = False
+SERVER_BOOT_SCRIPT_RUNNING = False
 
 # 定期的にbootエンドポイントにアクセスするスクリプト
 def bootServer():
     """サーバーを起動させ続ける。何度呼び出されても一度だけ処理を行う。
     """
-    global SERVER_BOOT
-    if SERVER_BOOT:
+    if SERVER_BOOT_SCRIPT_RUNNING:
+        # 同一ワーカーで起動スクリプトが走っている場合
+        # または別ワーカーで実行されており、それをすでに検知している場合
         return
-    SERVER_BOOT = True
-
+    elif os.getenv("SERVER_BOOT_SCRIPT_RUNNING"):
+        # 別ワーカーで実行されており、それを検知していない場合
+        # 自身のワーカーに検知状態を保存
+        SERVER_BOOT_SCRIPT_RUNNING = True
+        return
+    
+    # 起動スクリプトが走っていない場合
+    os.environ["SERVER_BOOT_SCRIPT_RUNNING"] = "True"
+    SERVER_BOOT_SCRIPT_RUNNING = True
     # threadsで実行するための処理
     def inner():
         while True:
