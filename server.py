@@ -99,27 +99,10 @@ def pushMessage():
     
     # プッシュメッセージを送信
     request_json = request.get_json()
-    target_group_id = request_json['target_group_id']
-    msg_type = request_json['msg_type']
-    msg_data = request_json['msg_data']
+    cmd = request_json['cmd'] # lineWebhookのコマンドと同じ形式 
 
-
-
-    line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
-
-    # タスクリマインダーの場合バブルメッセージを送信
-    if msg_type == 'task':
-        line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
-        task_bubble_msg = taskBubbleMsg()
-        task_bubble_msg.addReminder(*msg_data) # TODO エディタ上でエラーが出ない程度に適当に書いてる
-        msg = task_bubble_msg.getMessages()
-
-
-
-        line_bot_api.push_message(target_group_id,msg)
-    else: # TODO とりあえず適当にメッセージを送信してる
-        message = "test message"
-        line_bot_api.push_message(target_group_id, TextSendMessage(text=message)) 
+    # コマンド処理
+    Commands(CHANNEL_ACCESS_TOKEN).process(cmd)
 
 # 動作テスト用エンドポイント
 @app.route("/test")
