@@ -5,7 +5,7 @@ from pprint import pprint
 from datetime import datetime, timezone, timedelta
 import os
 
-import src.messages
+from src import messages
 from src.bubble_msg import taskBubbleMsg
 GAS_URL = os.getenv('GAS_URL')
 
