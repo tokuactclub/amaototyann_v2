@@ -18,6 +18,7 @@ if not os.getenv("IS_RENDER_SERVER"):
 
 CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')
 CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
+GP_URL = os.getenv('GP_URL')
 
 # Flaskのインスタンスを作成
 app = Flask(__name__)

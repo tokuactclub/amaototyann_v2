@@ -4,9 +4,10 @@ import messages
 import requests
 from pprint import pprint
 from datetime import datetime, timezone, timedelta
+import os
 
 from bubble_msg import taskBubbleMsg
-GAS_URL = "https://script.google.com/macros/s/AKfycby8acn6-HFL9snjXpYp1bK8S8Ju7w6WR4la6znsMjJNpvsDLSnZl0D-UtyfG2P_o1JL/exec"
+GAS_URL = os.getenv('GAS_URL')
 class Commands(object):
     def __init__(self,channel_access_token, webhook_body= None, debug=False):
         """基本的にwebhookのコマンドを処理し、リプライメッセージで応答する。
