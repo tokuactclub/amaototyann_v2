@@ -8,8 +8,8 @@ import threading
 from linebot import LineBotApi
 import json
 
-from bubble_msg import taskBubbleMsg
-from command import Commands, CommandsScripts
+from src.bubble_msg import taskBubbleMsg
+from src.command import Commands, CommandsScripts
 
 # ローカル開発の場合.envファイルから環境変数を読み込む
 # IS_RENDER_SERVER が存在しない場合はローカル開発と判断

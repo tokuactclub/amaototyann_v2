@@ -6,7 +6,7 @@ from pprint import pprint
 from datetime import datetime, timezone, timedelta
 import os
 
-from bubble_msg import taskBubbleMsg
+from src.bubble_msg import taskBubbleMsg
 GAS_URL = os.getenv('GAS_URL')
 
 # コマンドの文字列を格納するクラス
