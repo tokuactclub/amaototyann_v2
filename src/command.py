@@ -109,7 +109,7 @@ class Commands(object):
             if len(events)>0:
                 self._send_text_message("\n\n".join(events))
             else:
-                self._send_text_message("今日の練習はありません")
+                self._send_text_message(messages.NO_PRACTICE)
         except Exception as e:
             print(e)
 
@@ -138,6 +138,10 @@ class Commands(object):
                     event["date"] = datetime.fromisoformat(event["date"].rstrip("Z")).strftime("%m/%d")
                     event["last_days"] = day_difference
                     result_events.append(event)
+            # リマインド対象がなければその旨を送信
+            if len(result_events) == 0:
+                self._send_text_message(messages.NONE_REMIND_TASK)
+                return
             # バブルメッセージを作成
             msg_task = taskBubbleMsg()
             for event in result_events:

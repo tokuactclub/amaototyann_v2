@@ -12,9 +12,12 @@ PRACTICE = """今日の練習は{0}でします。
 時間は{1}〜{2}です！遅刻・欠席は連絡をお願いします！
 {3}
 """
+NO_PRACTICE = "今日は練習はないよ！"
 HANDOVER = """あまおとの引き継ぎ資料だよ！
 Brookの招待URLから招待を受けないとアクセスできないから気をつけて！
 https://scrapbox.io/amaotoHandover/TOP
 """
 
 CMD_ERROR= "コマンドが見つかりませんでした"
+
+NONE_REMIND_TASK = "リマインドするタスクは無いよ！"
