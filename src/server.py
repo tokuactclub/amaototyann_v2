@@ -17,14 +17,25 @@ if not os.getenv("IS_RENDER_SERVER"):
     from dotenv import load_dotenv
     load_dotenv()   
 
-CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')
-CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
-GPT_URL = os.getenv('GPT_URL')
+GAS_URL = os.getenv('GAS_URL')
+
+# botの情報を取得する.以下の形式の二次元配列である。詳細はスプレッドシート参照
+# bot_name, channnel_access_token, channel_secret, gpt_webhook_url, in_group
+# [ [ 'あまおとちゃん', '', '', '', false ],
+#   [ 'あまおとくん', '', '', '', false ],
+#   [ 'あまおとママ', '', '', '', false ],
+#   [ 'あまおとパパ', '', '', '', false ] ]
+
+# gasから取得する
+BOT_INFOS = requests.post(
+                GAS_URL,
+                json={"cmd":"getBotInfo"}
+                ).json()
+
 
 
 # サーバー停止を阻止し常時起動させるスクリプト
-
-# 定期的にbootエンドポイントにアクセスするスクリプト
+# 定期的にbootエンドポイントにアクセスする
 
 # threadsで実行するための処理
 def boot_server():
@@ -103,7 +114,12 @@ def hello_world():
 def lineWebhook():
     print("got LINE webhook")
     # ウェブフックを送信してきたアカウントを?botId=で取得
-    botId = request.args.get("botId")
+    botId = int(request.args.get("botId"))
+
+    # botIdからbotの情報を取得
+    channel_access_token = BOT_INFOS[botId][1]
+    gpt_url = BOT_INFOS[botId][3]
+
 
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
@@ -121,7 +137,7 @@ def lineWebhook():
         # チャットボット機能の際は転送
         if message.startswith("あまおとちゃん"):
             for _ in range(3):
-                response = transcribeWebhook(request,GPT_URL)
+                response = transcribeWebhook(request,gpt_url)
                 if response[1] == 200:
                     return "finish", 200
                 time.sleep(0.5)
@@ -135,13 +151,16 @@ def lineWebhook():
         print("start command process")
         
         # コマンド処理
-        Commands(CHANNEL_ACCESS_TOKEN, webhook_body= request_json).process(message)
+        Commands(channel_access_token, webhook_body= request_json).process(message)
 
     return "finish", 200
 
 # プッシュメッセージ送信用のエンドポイント
 @app.route('/pushMessage', methods=['POST'])
 def pushMessage():
+    # メッセージ送信に使うアカウントを?botId=で取得
+    botId = int(request.args.get("botId"))
+    channel_access_token = BOT_INFOS[botId][1]
     
     # プッシュメッセージを送信
     request_json = request.get_json()
@@ -149,7 +168,7 @@ def pushMessage():
 
     # コマンド処理
 
-    result = Commands(CHANNEL_ACCESS_TOKEN).process(cmd)
+    result = Commands(channel_access_token).process(cmd)
     if result:
         return "finish", 200
     else:
@@ -158,7 +177,7 @@ def pushMessage():
 # 動作テスト用エンドポイント
 @app.route("/test")
 def test():
-    line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
+    line_bot_api = LineBotApi(BOT_INFOS[1][1])
     
     group_id = os.getenv("TEST_GROUP_ID")
 
