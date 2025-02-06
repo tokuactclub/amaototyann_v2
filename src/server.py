@@ -119,31 +119,33 @@ def lineWebhook():
     request_json = request.get_json()
     
     # ユーザーからのメッセージを取得
-    message:str = request_json['events'][0]['message']['text']
+    for event in request_json['events']:
+        if event['type'] != 'message': # メッセージ以外のイベントは無視
+            continue
+        message:str = event['message']['text']
 
-
-    # 引継ぎ資料がメッセージに含まれる場合コマンドに変換
-    if message.startswith("引き継ぎ資料") or message.startswith("引継ぎ資料"):
-        message = CommandsScripts.HANDOVER
+        # 引継ぎ資料がメッセージに含まれる場合コマンドに変換
+        if message.startswith("引き継ぎ資料") or message.startswith("引継ぎ資料"):
+            message = CommandsScripts.HANDOVER
+            
+        # チャットボット機能の際は転送
+        if message.startswith("あまおとちゃん"):
+            for _ in range(3):
+                response = transcribeWebhook(request,GPT_URL)
+                if response[1] == 200:
+                    return "finish", 200
+                time.sleep(0.5)
+            return "error", 200 # エラーだが、ここはLINEのサーバーに応答する都合上200を返す
         
-    # チャットボット機能の際は転送
-    if message.startswith("あまおとちゃん"):
-        for _ in range(3):
-            response = transcribeWebhook(request,GPT_URL)
-            if response[1] == 200:
-                return "finish", 200
-            time.sleep(0.5)
-        return "error", 200 # エラーだが、ここはLINEのサーバーに応答する都合上200を返す
-    
-    # 全角の！を半角に変換
-    message = message.replace("！", "!")
+        # 全角の！を半角に変換
+        message = message.replace("！", "!")
 
-    if not message.startswith("!"):
-        return "finish", 200
-    print("start command process")
-    
-    # コマンド処理
-    Commands(CHANNEL_ACCESS_TOKEN, webhook_body= request_json).process(message)
+        if not message.startswith("!"):
+            return "finish", 200
+        print("start command process")
+        
+        # コマンド処理
+        Commands(CHANNEL_ACCESS_TOKEN, webhook_body= request_json).process(message)
 
     return "finish", 200
 
