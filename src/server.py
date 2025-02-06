@@ -6,6 +6,7 @@ import time
 import threading
 
 from linebot import LineBotApi
+import json
 
 from bubble_msg import taskBubbleMsg
 from command import Commands
@@ -18,10 +19,8 @@ if not os.getenv("IS_RENDER_SERVER"):
 
 CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')
 CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
-GP_URL = os.getenv('GP_URL')
+GPT_URL = os.getenv('GPT_URL')
 
-# Flaskのインスタンスを作成
-app = Flask(__name__)
 
 # サーバー停止を阻止し常時起動させるスクリプト
 SERVER_BOOT_SCRIPT_RUNNING = False
@@ -53,6 +52,51 @@ def bootServer():
     thread = threading.Thread(target=inner)
     thread.start()
 
+# webhookを転送する関数
+def transcribeWebhook(request, url, body=None):
+    """webhookを転送する関数
+
+    Args:
+        request (Request): リクエスト
+        url (str): 転送先のURL
+        body (dict, optional): リクエストボディを変えたい場合指定
+
+    Returns:
+        Response: 転送先からのレスポンス
+    """
+    method = request.method
+    print(f"headersType:{type(request.headers)}")
+    headers = {key: value for key, value in dict(request.headers).items() if key != 'Host'} 
+    if(not body):#bodyを指定されなければeventのbodyを利用（本来の挙動）
+        body = request.json
+
+    print(f"Method: {method}Type:{type(method)}")
+    print(f"URL : {url}Type:{type(url)}")
+    print(f"Headers: {headers}Type:{type(headers)}")
+    print(f"Body: {body}Type:{type(body)}")
+
+    try:
+        # Reconstruct headers and forward the request
+        headers["Content-Type"] = "application/json;charset=utf-8"
+        response = requests.request(
+            method=method,
+            url=url,
+            headers=json.loads(json.dumps(headers)),
+            json=json.loads(json.dumps(body)),
+        )
+
+        print('Forwarded Data:', response)
+        print('HTTP Status Code:', response.status_code)
+
+        return 'Data forwarded successfully', 200
+    except Exception as e:
+        print('Error:', e)
+        return 'Failed to forward data', 500
+
+    
+# Flaskのインスタンスを作成
+app = Flask(__name__)
+
 # サーバーを起動させるためのエンドポイント
 @app.route('/boot', methods=['POST'])
 def boot():
@@ -77,10 +121,20 @@ def lineWebhook():
     # ユーザーからのメッセージを取得
     message:str = request_json['events'][0]['message']['text']
 
+
     # 引継ぎ資料がメッセージに含まれる場合コマンドに変換
     if message.startswith("引き継ぎ資料") or message.startswith("引継ぎ資料"):
         message = "!handover"
         
+    # チャットボット機能の際は転送
+    if message.startswith("あまおとちゃん"):
+        for _ in range(3):
+            response = transcribeWebhook(request,GPT_URL)
+            if response[1] == 200:
+                return "finish", 200
+            time.sleep(0.5)
+        return "error", 200 # エラーだが、ここはLINEのサーバーに応答する都合上200を返す
+    
     # 全角の！を半角に変換
     message = message.replace("！", "!")
 
