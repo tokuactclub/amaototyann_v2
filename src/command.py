@@ -8,6 +8,17 @@ import os
 
 from bubble_msg import taskBubbleMsg
 GAS_URL = os.getenv('GAS_URL')
+
+# コマンドの文字列を格納するクラス
+class CommandsScripts:
+    HELP = "!help"
+    CHANGE_GROUP = "!changeGroup"
+    REMINDER = "!reminder"
+    PRACTICE = "!practice"
+    PLACE = "!place"
+    HANDOVER = "!handover"
+    HELLO = "!hello"
+    FINISH = "!finish"
 class Commands(object):
     def __init__(self,channel_access_token, webhook_body= None, debug=False):
         """基本的にwebhookのコマンドを処理し、リプライメッセージで応答する。
@@ -51,30 +62,30 @@ class Commands(object):
             cmd (str): !から始まるコマンド
         """
         commands = cmd.split()
-        cmd = commands[0][1:] # !を取り除く
-        if cmd == 'help':
+        cmd = commands[0]
+        if cmd == CommandsScripts.HELP:
             self._send_text_message(messages.HELP)
 
-        elif cmd == 'changeGroup':
+        elif cmd == CommandsScripts.CHANGE_GROUP:
             self._change_group()
             
-        elif cmd == 'reminder':
+        elif cmd == CommandsScripts.REMINDER:
             self._reminder()
 
-        elif cmd == 'practice':
+        elif cmd == CommandsScripts.PRACTICE:
             self._practice()
 
-        elif cmd == 'place':
+        elif cmd == CommandsScripts.PLACE:
             # TODO 活動場所メッセージ送信
             # 現在登録機構がないためpass
             pass
 
-        elif cmd == 'handover':
+        elif cmd == CommandsScripts.HANDOVER:
             self._send_text_message(messages.HANDOVER)
 
-        elif cmd == 'hello':
+        elif cmd == CommandsScripts.HELLO:
             self._send_text_message('Hello, World!')
-        elif cmd == 'finish':
+        elif cmd == CommandsScripts.FINISH:
             self._finish_event(id=commands[1])
         else:
             self._send_text_message(messages.CMD_ERROR)

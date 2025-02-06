@@ -9,7 +9,7 @@ from linebot import LineBotApi
 import json
 
 from bubble_msg import taskBubbleMsg
-from command import Commands
+from command import Commands, CommandsScripts
 
 # ローカル開発の場合.envファイルから環境変数を読み込む
 # IS_RENDER_SERVER が存在しない場合はローカル開発と判断
@@ -124,7 +124,7 @@ def lineWebhook():
 
     # 引継ぎ資料がメッセージに含まれる場合コマンドに変換
     if message.startswith("引き継ぎ資料") or message.startswith("引継ぎ資料"):
-        message = "!handover"
+        message = CommandsScripts.HANDOVER
         
     # チャットボット機能の際は転送
     if message.startswith("あまおとちゃん"):
