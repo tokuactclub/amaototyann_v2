@@ -147,7 +147,7 @@ def react_join_webhook(request, channel_access_token, bot_name, event_index):
     
     # グループの人数を取得
     group_id = request_json['events'][event_index]['source']['groupId']
-    group_member_count = LineBotApi.get_group_members_count(group_id)
+    group_member_count = LineBotApi(channel_access_token).get_group_members_count(group_id)
     
     # 残り送信可能なメッセージ数を取得
     remaining_message_count = LineBotApi.get_remaining_message_count(channel_access_token)
