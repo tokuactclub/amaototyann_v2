@@ -11,6 +11,7 @@ import json
 
 from src.command import Commands, CommandsScripts
 from src.system import BotInfo
+from src import messages
 # ローカル開発の場合.envファイルから環境変数を読み込む
 # IS_RENDER_SERVER が存在しない場合はローカル開発と判断
 if not os.getenv("IS_RENDER_SERVER"):
@@ -159,9 +160,7 @@ def react_join_webhook(request, channel_access_token, bot_name, event_index):
     
     line_bot_api.reply_message(
         event['replyToken'],
-        TextSendMessage(text= f"""{bot_name}がグループに参加したよ！
-        今月残り{remaining_message_count}回メッセージを送れるよ！
-        返信はカウントされないから安心してね！""")
+        TextSendMessage(text= messages.JOIN.format(bot_name, remaining_message_count))
     )
 
     # 参加したグループがリマインド対象のグループであればdatabaseを更新
