@@ -151,7 +151,7 @@ def react_join_webhook(request, channel_access_token, bot_name, event_index):
     group_member_count = line_bot_api.get_group_members_count(group_id)
     
     # 残り送信可能なメッセージ数を取得
-    remaining_message_count = line_bot_api.get_message_quota()
+    remaining_message_count = line_bot_api.get_message_quota()['value']
 
     # 残り送信可能な回数を計算(小数点以下切り捨て)
     remaining_message_count = remaining_message_count // group_member_count
