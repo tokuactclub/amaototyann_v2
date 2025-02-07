@@ -196,7 +196,7 @@ def lineWebhook():
 
     # botIdからbotの情報を取得
     global BOT_INFO_VERSION
-    os_bot_info_version = os.getenv("BOT_INFO_VERSION")
+    os_bot_info_version = int(os.getenv("BOT_INFO_VERSION"))
     if os_bot_info_version != BOT_INFO_VERSION:
         BOT_INFOS.fetch()
         BOT_INFO_VERSION = os_bot_info_version
