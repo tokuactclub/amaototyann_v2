@@ -204,10 +204,12 @@ def lineWebhook():
 # プッシュメッセージ送信用のエンドポイント
 @app.route('/pushMessage', methods=['POST'])
 def pushMessage():
-    # メッセージ送信に使うアカウントを?botId=で取得
-    botId = int(request.args.get("botId"))
-    channel_access_token = BOT_INFOS[botId][1]
-    
+    use_account = [account for account in BOT_INFOS if account[4] == True]
+    if len(use_account) == 0:
+        return "error", 400
+    use_account = use_account[0]
+    channel_access_token = use_account[1]
+
     # プッシュメッセージを送信
     request_json = request.get_json()
     cmd = request_json['cmd'] # lineWebhookのコマンドと同じ形式 
