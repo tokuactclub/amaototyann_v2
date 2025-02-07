@@ -30,6 +30,7 @@ GAS_URL = os.getenv('GAS_URL')
 # gasから取得する
 BOT_INFOS = BotInfo()
 BOT_INFOS.fetch()
+BOT_INFO_VERSION = int(os.getenv("BOT_INFO_VERSION"))
 
 
 
@@ -177,6 +178,12 @@ def react_join_webhook(request, channel_access_token, bot_name, event_index):
         # リマインド対象のグループに参加したことを記録
         BOT_INFOS[botId][4] = True
         BOT_INFOS.send()
+        # 更新したので環境変数のバージョンを更新
+        # 同期ズレとかも意識したほうが良さそうだけど、そもそもそんなに頻繁に更新しないので今回はこのまま
+        bot_info_version = int(os.getenv("BOT_INFO_VERSION"))
+        new_version = bot_info_version + 1
+        os.environ["BOT_INFO_VERSION"] = str(new_version)
+        BOT_INFO_VERSION = new_version
     return
 
 # lineWebhook用のエンドポイント
@@ -186,8 +193,11 @@ def lineWebhook():
     # ウェブフックを送信してきたアカウントを?botId=で取得
     botId = int(request.args.get("botId"))
 
-    # botIdからbotの情報を取得
-    BOT_INFOS.fetch()
+    # botIdからbotの情報を取得\
+    os_bot_info_version = os.getenv("BOT_INFO_VERSION")
+    if os_bot_info_version != BOT_INFO_VERSION:
+        BOT_INFOS.fetch()
+        BOT_INFO_VERSION = os_bot_info_version
     bot_name = BOT_INFOS[botId][0]
     channel_access_token = BOT_INFOS[botId][1]
     gpt_url = BOT_INFOS[botId][3]
