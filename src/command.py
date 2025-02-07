@@ -111,7 +111,7 @@ class Commands(object):
             print(events)
             if len(events)>0:
                 self._send_text_message("\n\n".join(events))
-            else:
+            elif self.webhook_body is not None:
                 self._send_text_message(messages.NO_PRACTICE)
         except Exception as e:
             print(e)
@@ -142,7 +142,7 @@ class Commands(object):
                     event["last_days"] = day_difference
                     result_events.append(event)
             # リマインド対象がなければその旨を送信
-            if len(result_events) == 0:
+            if len(result_events) == 0 and self.webhook_body is not None:
                 self._send_text_message(messages.NONE_REMIND_TASK)
                 return
             # バブルメッセージを作成
