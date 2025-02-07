@@ -147,7 +147,8 @@ def react_join_webhook(request, channel_access_token, bot_name, event_index):
     
     # グループの人数を取得
     line_bot_api = LineBotApi(channel_access_token)
-    group_id = request_json['events'][event_index]['source']['groupId']
+    event = request_json['events'][event_index]
+    group_id = event['source']['groupId']
     group_member_count = line_bot_api.get_group_members_count(group_id)
     
     # 残り送信可能なメッセージ数を取得
@@ -157,7 +158,7 @@ def react_join_webhook(request, channel_access_token, bot_name, event_index):
     remaining_message_count = remaining_message_count // group_member_count
     
     LineBotApi(channel_access_token).reply_message(
-        request_json['events']['replyToken'],
+        event['replyToken'],
         f"""{bot_name}がグループに参加したよ！
         今月残り{remaining_message_count}回メッセージを送れるよ！
         返信はカウントされないから安心してね！"""
