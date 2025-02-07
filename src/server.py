@@ -225,20 +225,22 @@ def pushMessage():
 # 動作テスト用エンドポイント
 @app.route("/test")
 def test():
-    line_bot_api = LineBotApi(BOT_INFOS[1][1])
-    
-    group_id = os.getenv("TEST_GROUP_ID")
+    use_account = [account for account in BOT_INFOS if account[4] == True]
+    if len(use_account) == 0:
+        return "error", 400
+    use_account = use_account[0]
+    channel_access_token = use_account[1]
 
-    task_bubble_msg = taskBubbleMsg()
-    task_bubble_msg.addReminder("舞台監督", "foo", "01/10", 4, "台本", "memo", "hoge") # TODO エディタ上でエラーが出ない程度に適当に書いてる
-    msg = task_bubble_msg.getMessages()
+    # プッシュメッセージを送信
+    cmd = "!reminder" # lineWebhookのコマンドと同じ形式 
 
+    # コマンド処理
 
-
-    line_bot_api.push_message(group_id,msg)# TODO msgの指定方法が正しいか不明
-
-
-    return "finish"
+    result = Commands(channel_access_token).process(cmd)
+    if result:
+        return "finish", 200
+    else:
+        return "error", 400
 
 
 
