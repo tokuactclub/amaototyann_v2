@@ -6,9 +6,9 @@ import time
 import threading
 
 from linebot import LineBotApi
+from linebot.models import TextSendMessage
 import json
 
-from src.bubble_msg import taskBubbleMsg
 from src.command import Commands, CommandsScripts
 from src.system import BotInfo
 # ローカル開発の場合.envファイルから環境変数を読み込む
@@ -157,11 +157,11 @@ def react_join_webhook(request, channel_access_token, bot_name, event_index):
     # 残り送信可能な回数を計算(小数点以下切り捨て)
     remaining_message_count = remaining_message_count // group_member_count
     
-    LineBotApi(channel_access_token).reply_message(
+    line_bot_api.reply_message(
         event['replyToken'],
-        f"""{bot_name}がグループに参加したよ！
+        TextSendMessage(text= f"""{bot_name}がグループに参加したよ！
         今月残り{remaining_message_count}回メッセージを送れるよ！
-        返信はカウントされないから安心してね！"""
+        返信はカウントされないから安心してね！""")
     )
 
     # 参加したグループがリマインド対象のグループであればdatabaseを更新
