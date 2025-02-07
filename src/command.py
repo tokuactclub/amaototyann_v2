@@ -167,7 +167,6 @@ class Commands(object):
 
     def _finish_event(self, id):
         try:
-            print(f"id: {id}")
             response = requests.post(
                 GAS_URL,
                 json={"cmd":"finish","options":{"id":id}},
