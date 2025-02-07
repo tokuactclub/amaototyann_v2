@@ -195,9 +195,9 @@ def lineWebhook():
     # ユーザーからのメッセージを取得
     for i,event in enumerate(request.get_json()['events']):
         if event['type'] == 'message': # メッセージイベント
-            react_message_webhook(request, channel_access_token, gpt_url)
+            react_message_webhook(request, channel_access_token, gpt_url, i)
         elif event['type'] == 'join': # グループ参加イベント
-            react_join_webhook(request, channel_access_token, bot_name)
+            react_join_webhook(request, channel_access_token, bot_name, i)
 
     return "finish", 200
 
