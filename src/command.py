@@ -7,6 +7,7 @@ import os
 
 from src import messages
 from src.bubble_msg import taskBubbleMsg
+from src.system import BotInfo
 GAS_URL = os.getenv('GAS_URL')
 
 # コマンドの文字列を格納するクラス
@@ -20,15 +21,17 @@ class CommandsScripts:
     HELLO = "!hello"
     FINISH = "!finish"
 class Commands(object):
-    def __init__(self,channel_access_token, webhook_body= None, debug=False):
+    def __init__(self,channel_access_token, request= None, debug=False):
         """基本的にwebhookのコマンドを処理し、リプライメッセージで応答する。
         ただし一部関数はwebhookを介さずともpushメッセージにより対応する。
 
         Args:
             channel_access_token (str): linebotのチャンネルアクセストークン
-            webhook_body (dict): webhookで受け取ったリクエストボディ
+            request (): webhookで受け取ったrequestそのもの
             debug (bool, optional): デバッグモードかどうか
         """
+        webhook_body = request.get_json()
+        self.botId = int(request.args.get("botId"))
 
         if webhook_body is not None:
             self.webhook_body = webhook_body
@@ -189,7 +192,8 @@ class Commands(object):
                 "cmd":"changeGroup",
                 "options":{
                     "id":group_id,
-                    "groupName":group_name
+                    "groupName":group_name,
+                    "botId":self.botId
                 }
             }
         ).text

@@ -10,7 +10,7 @@ import json
 
 from src.bubble_msg import taskBubbleMsg
 from src.command import Commands, CommandsScripts
-
+from src.system import BotInfo
 # ローカル開発の場合.envファイルから環境変数を読み込む
 # IS_RENDER_SERVER が存在しない場合はローカル開発と判断
 if not os.getenv("IS_RENDER_SERVER"):
@@ -27,10 +27,8 @@ GAS_URL = os.getenv('GAS_URL')
 #   [ 'あまおとパパ', '', '', '', false ] ]
 
 # gasから取得する
-BOT_INFOS = requests.post(
-                GAS_URL,
-                json={"cmd":"getBotInfo"}
-                ).json()
+BOT_INFOS = BotInfo()
+BOT_INFOS.fetch()
 
 
 
@@ -137,12 +135,13 @@ def react_message_webhook(request, channel_access_token, gpt_url):
     print("start command process")
     
     # コマンド処理
-    Commands(channel_access_token, webhook_body= request_json).process(message)
+    Commands(channel_access_token, request= request).process(message)
 
     return
 
 def react_join_webhook(request, channel_access_token, bot_name):
     print("got join webhook")
+    botId = int(request.args.get("botId"))
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
     
@@ -174,12 +173,9 @@ def react_join_webhook(request, channel_access_token, bot_name):
 
     # リマインド対象のグループIDと一致する場合
     if group_id == TARGET_GROUP_ID:
-        # リマインド対象のグループに追加
-        requests.post(
-            GAS_URL,
-            json={"cmd":"addReminderGroup","groupId":group_id}
-        )
-    
+        # リマインド対象のグループに参加したことを記録
+        BOT_INFOS[botId][4] = True
+        BOT_INFOS.send()
     return
 
 # lineWebhook用のエンドポイント
@@ -190,6 +186,7 @@ def lineWebhook():
     botId = int(request.args.get("botId"))
 
     # botIdからbotの情報を取得
+    BOT_INFOS.fetch()
     bot_name = BOT_INFOS[botId][0]
     channel_access_token = BOT_INFOS[botId][1]
     gpt_url = BOT_INFOS[botId][3]
