@@ -58,7 +58,7 @@ class Commands(object):
         """
         self._command_process(cmd)
     
-    def _command_process(self, cmd):
+    def _command_process(self, cmd:str):
         """コマンドの処理を行う
 
         Args:
@@ -169,7 +169,7 @@ class Commands(object):
         try:
             response = requests.post(
                 GAS_URL,
-                json={"cmd":"finish","id":id},
+                json={"cmd":"finish","options":{"id":id}},
                 )
             task_name = response.text
             if task_name != "error":
