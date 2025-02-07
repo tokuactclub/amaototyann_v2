@@ -107,12 +107,12 @@ def boot():
 def hello_world():
     return 'Hello, World!'
 
-def react_message_webhook(request, channel_access_token, gpt_url):
+def react_message_webhook(request, channel_access_token, gpt_url, event_index):
     print("got react message webhook")
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
     
-    message:str = request_json['events']['message']['text']
+    message:str = request_json['events'][event_index]['message']['text']
 
     # 引継ぎ資料がメッセージに含まれる場合コマンドに変換
     if message.startswith("引き継ぎ資料") or message.startswith("引継ぎ資料"):
@@ -139,14 +139,14 @@ def react_message_webhook(request, channel_access_token, gpt_url):
 
     return
 
-def react_join_webhook(request, channel_access_token, bot_name):
+def react_join_webhook(request, channel_access_token, bot_name, event_index):
     print("got join webhook")
     botId = int(request.args.get("botId"))
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
     
     # グループの人数を取得
-    group_id = request_json['events']['source']['groupId']
+    group_id = request_json['events'][event_index]['source']['groupId']
     group_member_count = LineBotApi.get_group_members_count(group_id)
     
     # 残り送信可能なメッセージ数を取得
@@ -193,7 +193,7 @@ def lineWebhook():
 
 
     # ユーザーからのメッセージを取得
-    for event in request.get_json()['events']:
+    for i,event in enumerate(request.get_json()['events']):
         if event['type'] == 'message': # メッセージイベント
             react_message_webhook(request, channel_access_token, gpt_url)
         elif event['type'] == 'join': # グループ参加イベント
