@@ -141,6 +141,47 @@ def react_message_webhook(request, channel_access_token, gpt_url):
 
     return
 
+def react_join_webhook(request, channel_access_token, bot_name):
+    print("got join webhook")
+    # リクエストボディーをJSONに変換
+    request_json = request.get_json()
+    
+    # グループの人数を取得
+    group_id = request_json['events']['source']['groupId']
+    group_member_count = LineBotApi.get_group_members_count(group_id)
+    
+    # 残り送信可能なメッセージ数を取得
+    remaining_message_count = LineBotApi.get_remaining_message_count(channel_access_token)
+
+    # 残り送信可能な回数を計算(小数点以下切り捨て)
+    remaining_message_count = remaining_message_count // group_member_count
+    
+    LineBotApi(channel_access_token).reply_message(
+        request_json['events']['replyToken'],
+        f"""{bot_name}がグループに参加したよ！
+        今月残り{remaining_message_count}回メッセージを送れるよ！
+        返信はカウントされないから安心してね！"""
+    )
+
+    # 参加したグループがリマインド対象のグループであればdatabaseを更新
+    # リマインド対象のグループIDを取得 
+    group_info = requests.post(
+                GAS_URL,
+                json={"cmd":"getGroupInfo"}
+                ).json()
+            
+    TARGET_GROUP_ID = group_info["id"]
+
+    # リマインド対象のグループIDと一致する場合
+    if group_id == TARGET_GROUP_ID:
+        # リマインド対象のグループに追加
+        requests.post(
+            GAS_URL,
+            json={"cmd":"addReminderGroup","groupId":group_id}
+        )
+    
+    return
+
 # lineWebhook用のエンドポイント
 @app.route('/lineWebhook', methods=['POST'])
 def lineWebhook():
@@ -149,6 +190,7 @@ def lineWebhook():
     botId = int(request.args.get("botId"))
 
     # botIdからbotの情報を取得
+    bot_name = BOT_INFOS[botId][0]
     channel_access_token = BOT_INFOS[botId][1]
     gpt_url = BOT_INFOS[botId][3]
 
@@ -157,6 +199,8 @@ def lineWebhook():
     for event in request.get_json()['events']:
         if event['type'] == 'message': # メッセージイベント
             react_message_webhook(request, channel_access_token, gpt_url)
+        elif event['type'] == 'join': # グループ参加イベント
+            react_join_webhook(request, channel_access_token, bot_name)
 
     return "finish", 200
 
