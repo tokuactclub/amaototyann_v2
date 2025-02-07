@@ -109,6 +109,38 @@ def boot():
 def hello_world():
     return 'Hello, World!'
 
+def react_message_webhook(request, channel_access_token, gpt_url):
+    print("got react message webhook")
+    # リクエストボディーをJSONに変換
+    request_json = request.get_json()
+    
+    message:str = request_json['events']['message']['text']
+
+    # 引継ぎ資料がメッセージに含まれる場合コマンドに変換
+    if message.startswith("引き継ぎ資料") or message.startswith("引継ぎ資料"):
+        message = CommandsScripts.HANDOVER
+        
+    # チャットボット機能の際は転送
+    if message.startswith("あまおとちゃん"):
+        for _ in range(3):
+            response = transcribeWebhook(request,gpt_url)
+            if response[1] == 200:
+                return "finish", 200
+            time.sleep(0.5)
+        return "error", 200 # エラーだが、ここはLINEのサーバーに応答する都合上200を返す
+    
+    # 全角の！を半角に変換
+    message = message.replace("！", "!")
+
+    if not message.startswith("!"):
+        return "finish", 200
+    print("start command process")
+    
+    # コマンド処理
+    Commands(channel_access_token, webhook_body= request_json).process(message)
+
+    return
+
 # lineWebhook用のエンドポイント
 @app.route('/lineWebhook', methods=['POST'])
 def lineWebhook():
@@ -121,37 +153,10 @@ def lineWebhook():
     gpt_url = BOT_INFOS[botId][3]
 
 
-    # リクエストボディーをJSONに変換
-    request_json = request.get_json()
-    
     # ユーザーからのメッセージを取得
-    for event in request_json['events']:
-        if event['type'] != 'message': # メッセージ以外のイベントは無視
-            continue
-        message:str = event['message']['text']
-
-        # 引継ぎ資料がメッセージに含まれる場合コマンドに変換
-        if message.startswith("引き継ぎ資料") or message.startswith("引継ぎ資料"):
-            message = CommandsScripts.HANDOVER
-            
-        # チャットボット機能の際は転送
-        if message.startswith("あまおとちゃん"):
-            for _ in range(3):
-                response = transcribeWebhook(request,gpt_url)
-                if response[1] == 200:
-                    return "finish", 200
-                time.sleep(0.5)
-            return "error", 200 # エラーだが、ここはLINEのサーバーに応答する都合上200を返す
-        
-        # 全角の！を半角に変換
-        message = message.replace("！", "!")
-
-        if not message.startswith("!"):
-            return "finish", 200
-        print("start command process")
-        
-        # コマンド処理
-        Commands(channel_access_token, webhook_body= request_json).process(message)
+    for event in request.get_json()['events']:
+        if event['type'] == 'message': # メッセージイベント
+            react_message_webhook(request, channel_access_token, gpt_url)
 
     return "finish", 200
 
