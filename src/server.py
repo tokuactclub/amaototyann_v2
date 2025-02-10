@@ -224,9 +224,10 @@ def pushMessage():
     channel_access_token = use_account[1]
 
     # プッシュメッセージを送信
-    request_json = request.get_json()
-    cmd = request_json['cmd'] # lineWebhookのコマンドと同じ形式 
-
+    request_json:dict = request.get_json()
+    cmd = request_json.get("cmd") # lineWebhookのコマンドと同じ形式 
+    if cmd is None:
+        return "error cmd isn't defined", 400
     # コマンド処理
 
     result = Commands(channel_access_token).process(cmd)
