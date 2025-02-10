@@ -21,7 +21,7 @@ class CommandsScripts:
     HELLO = "!hello"
     FINISH = "!finish"
 class Commands(object):
-    def __init__(self,channel_access_token, request= None, debug=False):
+    def __init__(self,channel_access_token, request, debug=False):
         """基本的にwebhookのコマンドを処理し、リプライメッセージで応答する。
         ただし一部関数はwebhookを介さずともpushメッセージにより対応する。
 
@@ -30,13 +30,11 @@ class Commands(object):
             request (): webhookで受け取ったrequestそのもの
             debug (bool, optional): デバッグモードかどうか
         """
-        webhook_body = request.get_json()
+        self.webhook_body = request.get_json()
         self.botId = int(request.args.get("botId"))
-
-        if webhook_body is not None:
-            self.webhook_body = webhook_body
-            reply_token = webhook_body['events'][0]['replyToken']
-            self.reply_token = reply_token
+        self.is_webhook_request = bool(self.webhook_body.get("events"))
+        if self.is_webhook_request: #requestがwebhookの場合
+            self.reply_token = self.webhook_body['events'][0]['replyToken']
         else:
             group_info = requests.post(
                 GAS_URL,
@@ -111,7 +109,7 @@ class Commands(object):
             print(events)
             if len(events)>0:
                 self._send_text_message("\n\n".join(events))
-            elif self.webhook_body is not None:
+            elif self.is_webhook_request:
                 self._send_text_message(messages.NO_PRACTICE)
         except Exception as e:
             print(e)
@@ -142,7 +140,7 @@ class Commands(object):
                     event["last_days"] = day_difference
                     result_events.append(event)
             # リマインド対象がなければその旨を送信
-            if len(result_events) == 0 and self.webhook_body is not None:
+            if len(result_events) == 0 and self.is_webhook_request:
                 self._send_text_message(messages.NONE_REMIND_TASK)
                 return
             # バブルメッセージを作成

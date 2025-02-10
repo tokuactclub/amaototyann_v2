@@ -230,7 +230,7 @@ def pushMessage():
         return "error cmd isn't defined", 400
     # コマンド処理
 
-    result = Commands(channel_access_token).process(cmd)
+    result = Commands(channel_access_token, request=request).process(cmd)
     if result:
         return "finish", 200
     else:
