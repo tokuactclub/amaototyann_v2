@@ -156,10 +156,7 @@ class Commands(object):
                     id=event["id"],
                 )
             # メッセージを送信
-            self.line_bot_api.reply_message(
-                self.reply_token,
-                msg_task.getMessages()
-            )
+            self._send_bubble_message(msg_task.getMessages())
         except Exception as e:
             print(e)
 
@@ -215,13 +212,13 @@ class Commands(object):
     def _send_bubble_message(self, bubble):
         if self.debug:
             pprint(bubble)
-        elif self.reply_token is None:
-            self.line_bot_api.push_message(
-                self.TARGET_GROUP_ID, bubble
-            )
-        else:
+        elif self.is_webhook_request:
             self.line_bot_api.reply_message(
                 self.reply_token, bubble
+            )
+        else:
+            self.line_bot_api.push_message(
+                self.TARGET_GROUP_ID, bubble
             )
     
     def _calculate_date_difference(self, iso_datetime: str, tz_offset_hours: int = 0):
