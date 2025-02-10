@@ -204,13 +204,13 @@ class Commands(object):
     def _send_text_message(self, text):
         if self.debug:
             print(text)
-        elif self.reply_token is None:
-            self.line_bot_api.push_message(
-                self.TARGET_GROUP_ID, TextSendMessage(text=text)
-            )
-        else:
+        elif self.is_webhook_request:
             self.line_bot_api.reply_message(
                 self.reply_token, TextSendMessage(text=text)
+            )
+        else:
+            self.line_bot_api.push_message(
+                self.TARGET_GROUP_ID, TextSendMessage(text=text)
             )
     def _send_bubble_message(self, bubble):
         if self.debug:
