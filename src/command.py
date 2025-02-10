@@ -31,9 +31,9 @@ class Commands(object):
             debug (bool, optional): デバッグモードかどうか
         """
         self.webhook_body = request.get_json()
-        self.botId = int(request.args.get("botId"))
         self.is_webhook_request = bool(self.webhook_body.get("events"))
         if self.is_webhook_request: #requestがwebhookの場合
+            self.botId = int(request.args.get("botId"))
             self.reply_token = self.webhook_body['events'][0]['replyToken']
         else:
             group_info = requests.post(
