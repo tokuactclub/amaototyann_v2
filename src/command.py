@@ -54,7 +54,7 @@ class Commands(object):
         Args:
             cmd (str): !から始まるコマンド
         """
-        self._command_process(cmd)
+        return self._command_process(cmd)
     
     def _command_process(self, cmd:str):
         """コマンドの処理を行う
