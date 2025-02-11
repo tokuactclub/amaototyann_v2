@@ -137,7 +137,7 @@ class Commands(object):
                     continue
 
                 # 日時の差分を計算
-                day_difference = self._calculate_date_difference( event["date"])
+                day_difference = self._calculate_date_difference( event["date"], tz_offset_hours=9)
                 if day_difference < 0:
                     continue
 
