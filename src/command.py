@@ -5,9 +5,13 @@ from pprint import pprint
 from datetime import datetime, timezone, timedelta
 import os
 
-from src import messages
-from src.bubble_msg import taskBubbleMsg
-from src.system import BotInfo
+# ローカル実行の場合は相対パスでimportする
+try:
+    from src import messages
+    from src.bubble_msg import taskBubbleMsg
+except:
+    import messages
+    from bubble_msg import taskBubbleMsg
 GAS_URL = os.getenv('GAS_URL')
 
 # コマンドの文字列を格納するクラス
@@ -27,11 +31,15 @@ class Commands(object):
 
         Args:
             channel_access_token (str): linebotのチャンネルアクセストークン
-            request (): webhookで受け取ったrequestそのもの
+            request (bool, optional): webhookやpostで受け取ったrequestそのもの
             debug (bool, optional): デバッグモードかどうか
         """
-        self.webhook_body = request.get_json()
-        self.is_webhook_request = bool(self.webhook_body.get("events"))
+        if debug:
+            self.is_webhook_request = False
+        else:
+            self.webhook_body = request.get_json()
+            self.is_webhook_request = bool(self.webhook_body.get("events"))
+        
         if self.is_webhook_request: #requestがwebhookの場合
             self.botId = int(request.args.get("botId"))
             self.reply_token = self.webhook_body['events'][0]['replyToken']
@@ -248,4 +256,4 @@ class Commands(object):
         return day_difference
 
 if __name__ == "__main__":
-    Commands("test", "test",debug=True).process("!reminder")
+    Commands(channel_access_token="test",request="test", debug=True).process("!reminder")
