@@ -16,7 +16,7 @@ except:
 GAS_URL = os.getenv('GAS_URL')
 
 # loggerの設定
-with open("log_config.json", "r") as f:
+with open("src/log_config.json", "r") as f:
     config.dictConfig(json.load(f))
 logger = getLogger(__name__)
 
