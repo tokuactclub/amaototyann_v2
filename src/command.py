@@ -4,7 +4,8 @@ import requests
 from pprint import pprint
 from datetime import datetime, timezone, timedelta
 import os
-
+from logging import getLogger, config
+import json
 # ローカル実行の場合は相対パスでimportする
 try:
     from src import messages
@@ -13,6 +14,12 @@ except:
     import messages
     from bubble_msg import taskBubbleMsg
 GAS_URL = os.getenv('GAS_URL')
+
+# loggerの設定
+with open("log_config.json", "r") as f:
+    config.dictConfig(json.load(f))
+logger = getLogger(__name__)
+
 
 # コマンドの文字列を格納するクラス
 class CommandsScripts:
@@ -35,21 +42,26 @@ class Commands(object):
             debug (bool, optional): デバッグモードかどうか
         """
         if debug:
+            logger.info("debug mode")
             self.is_webhook_request = False
         else:
+            logger.info("nomal mode(not debug)")
             self.webhook_body = request.get_json()
             self.is_webhook_request = bool(self.webhook_body.get("events"))
         
         if self.is_webhook_request: #requestがwebhookの場合
+            logger.info("webhook request")
             self.botId = int(request.args.get("botId"))
             self.reply_token = self.webhook_body['events'][0]['replyToken']
         else:
+            logger.info("push message")
             group_info = requests.post(
                 GAS_URL,
                 json={"cmd":"getGroupInfo"}
                 ).json()
             
             self.TARGET_GROUP_ID = group_info["id"]
+            logger.info(f"target group id: {self.TARGET_GROUP_ID}\nchannel_access_token: {channel_access_token}")
 
         self.debug = debug
         if debug:
@@ -98,6 +110,7 @@ class Commands(object):
             self._finish_event(id=commands[1])
         else:
             self._send_text_message(messages.CMD_ERROR)
+            logger.error(f"command not found: {cmd}")
             return False
         return True
 
