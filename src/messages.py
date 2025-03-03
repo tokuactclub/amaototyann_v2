@@ -4,8 +4,7 @@ HELP = """コマンド一覧だよ！
 - !reminder: リマインダーを送るよ
 - !practice: その日部活があるか送るよ
 - !place: 部活がとっている場所を送るよ
-- !handover: 引き継ぎ資料のURLを送るよ
-"""
+- !handover: 引き継ぎ資料のURLを送るよ"""
 
 CHANGE_GROUP = "リマインドするグループを変更したよ！"
 PRACTICE = """今日の練習は{0}でします。
@@ -14,8 +13,7 @@ NO_PRACTICE = "今日は練習はないよ！"
 
 HANDOVER = """あまおとの引き継ぎ資料だよ！
 Brookの招待URLから招待を受けないとアクセスできないから気をつけて！
-https://scrapbox.io/amaotoHandover/TOP
-"""
+https://scrapbox.io/amaotoHandover/TOP"""
 
 JOIN = """{0}がグループに参加したよ！
 今月残り{1}回メッセージを送れるよ！

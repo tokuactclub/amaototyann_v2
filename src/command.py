@@ -110,7 +110,7 @@ class Commands(object):
                 )
             events = response.json()
             events = map(
-                lambda x: messages.PRACTICE.format(x["place"], x["start"], x["end"], "\n" + x["memo"]),
+                lambda x: messages.PRACTICE.format(x["place"], x["start"], x["end"], "\n" + x["memo"] if x["memo"] else ""),
                 events
                 )
             events = list(events)
