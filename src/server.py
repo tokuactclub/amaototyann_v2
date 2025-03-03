@@ -1,6 +1,5 @@
 from flask import Flask, request
 import os
-
 import requests
 import time
 import threading
@@ -14,7 +13,8 @@ from src.system import BotInfo
 from src import messages
 # ローカル開発の場合.envファイルから環境変数を読み込む
 # IS_RENDER_SERVER が存在しない場合はローカル開発と判断
-if not os.getenv("IS_RENDER_SERVER"):
+is_render_server = os.getenv("IS_RENDER_SERVER")
+if not is_render_server or is_render_server == "False":
     from dotenv import load_dotenv
     load_dotenv()   
 
@@ -262,4 +262,3 @@ def test():
 
 if __name__ == '__main__':
     app.run(debug=True)
-    
