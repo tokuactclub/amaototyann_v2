@@ -21,7 +21,7 @@
 - 使用例: `!practice `
 
 ### 練習場所
-- 説明: 登録済みの練習場所を、練習場所のみで送信する
+- 説明: 未実装. 登録済みの練習場所を、練習場所のみで送信する
 - 使用例: `!place`
 
 ### 引き継ぎ資料
@@ -36,3 +36,14 @@
 ## 注意事項
 - 各コマンドの詳細な使用方法やオプションについては、実装後に追記予定です。
 - コマンドの実装状況に応じて、内容が変更される可能性があります。
+
+## Developer
+Before running the script, grant execute permission:
+
+```
+chmod +x start.sh
+```
+Then, start the script with:
+```
+./start.sh
+```
