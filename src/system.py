@@ -1,40 +1,31 @@
 import requests
 import os
 from pprint import pprint
-class BotInfo(list):
+
+class BotInfo():
     def __init__(self):
-        # self.GAS_URL = os.getenv('GAS_URL')
-        self.GAS_URL = 'https://script.google.com/macros/s/AKfycby8acn6-HFL9snjXpYp1bK8S8Ju7w6WR4la6znsMjJNpvsDLSnZl0D-UtyfG2P_o1JL/exec'
+        self.database_url = os.getenv("DATABASE_URL")
+
+    def get(self, id):
+        url = f"{self.database_url}/get/{id}"
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
+    
+    def update(self, id, column, value):
+        url = f"{self.database_url}/update/{id}/{column}/"
+        response = requests.get(url, params={"value": value})
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
         
-        self.fetch()
-        self.update_infos = False
-    
-    
-    def __setitem__(self, index, value):
-        if super().__getitem__(index) != value:
-            self.update_infos = True
-        super().__setitem__(index, value)
-
-    def fetch(self):
-        BOT_INFOS = requests.post(
-                self.GAS_URL,
-                json={"cmd":"getBotInfo"}
-                ).json()
-        super().__init__(BOT_INFOS)
-
-    def send(self):
-        requests.post(
-            self.GAS_URL,
-            json={"cmd":"setBotInfo", "options":{ "bot_info": self}}
-            )
-
-    
-if __name__ == "__main__":
-    botInfo = BotInfo()
-    pprint(botInfo)
-    botInfo[0][0] = "あまおとちゃん2"
-    pprint(botInfo)
-    # botInfo.test()
-    botInfo.send()
-    botInfo.fetch()
-    pprint(botInfo)
+    def get_all(self):
+        url = f"{self.database_url}/list/"
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None

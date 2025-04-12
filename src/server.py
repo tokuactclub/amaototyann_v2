@@ -29,9 +29,6 @@ GAS_URL = os.getenv('GAS_URL')
 
 # gasから取得する
 BOT_INFOS = BotInfo()
-BOT_INFOS.fetch()
-BOT_INFO_VERSION = int(os.getenv("BOT_INFO_VERSION"))
-
 
 
 # サーバー停止を阻止し常時起動させるスクリプト
@@ -176,15 +173,7 @@ def react_join_webhook(request, channel_access_token, bot_name, event_index):
     # リマインド対象のグループIDと一致する場合
     if group_id == TARGET_GROUP_ID:
         # リマインド対象のグループに参加したことを記録
-        BOT_INFOS[botId][4] = True
-        BOT_INFOS.send()
-        # 更新したので環境変数のバージョンを更新
-        # 同期ズレとかも意識したほうが良さそうだけど、そもそもそんなに頻繁に更新しないので今回はこのまま
-        os_bot_info_version = int(os.getenv("BOT_INFO_VERSION"))
-        new_version = os_bot_info_version + 1
-        os.environ["BOT_INFO_VERSION"] = str(new_version)
-        global BOT_INFO_VERSION
-        BOT_INFO_VERSION = new_version
+        BOT_INFOS.update(botId, "in_group", True)
     return
 
 def react_left_webhook(request):
@@ -192,16 +181,7 @@ def react_left_webhook(request):
     botId = int(request.args.get("botId"))
     
     # グループから抜けたことを記録
-    BOT_INFOS[botId][4] = False
-    BOT_INFOS.send()
-
-    # 更新したので環境変数のバージョンを更新
-    # 同期ズレとかも意識したほうが良さそうだけど、そもそもそんなに頻繁に更新しないので今回はこのまま
-    os_bot_info_version = int(os.getenv("BOT_INFO_VERSION"))
-    new_version = os_bot_info_version + 1
-    os.environ["BOT_INFO_VERSION"] = str(new_version)
-    global BOT_INFO_VERSION
-    BOT_INFO_VERSION = new_version
+    BOT_INFOS.update(botId, "in_group", False)
 
 # lineWebhook用のエンドポイント
 @app.route('/lineWebhook', methods=['POST'])
@@ -211,14 +191,10 @@ def lineWebhook():
     botId = int(request.args.get("botId"))
 
     # botIdからbotの情報を取得
-    global BOT_INFO_VERSION
-    os_bot_info_version = int(os.getenv("BOT_INFO_VERSION"))
-    if os_bot_info_version != BOT_INFO_VERSION:
-        BOT_INFOS.fetch()
-        BOT_INFO_VERSION = os_bot_info_version
-    bot_name = BOT_INFOS[botId][0]
-    channel_access_token = BOT_INFOS[botId][1]
-    gpt_url = BOT_INFOS[botId][3]
+    bot_info = BOT_INFOS.get(botId)
+    bot_name = bot_info[0]
+    channel_access_token = bot_info[1]
+    gpt_url = bot_info[3]
 
 
     # ユーザーからのメッセージを取得
@@ -235,7 +211,7 @@ def lineWebhook():
 # プッシュメッセージ送信用のエンドポイント
 @app.route('/pushMessage', methods=['POST'])
 def pushMessage():
-    use_account = [account for account in BOT_INFOS if account[4] == True]
+    use_account = [account for account in BOT_INFOS.get_all() if account[4] == True]
     if len(use_account) == 0:
         return "error", 400
     use_account = use_account[0]
@@ -257,7 +233,7 @@ def pushMessage():
 # 動作テスト用エンドポイント
 @app.route("/test")
 def test():
-    use_account = [account for account in BOT_INFOS if account[4] == True]
+    use_account = [account for account in BOT_INFOS.get_all() if account[4] == True]
     if len(use_account) == 0:
         return "error", 400
     use_account = use_account[0]
