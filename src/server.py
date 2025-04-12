@@ -197,10 +197,9 @@ def lineWebhook():
 
     # botIdからbotの情報を取得
     bot_info = BOT_INFOS.get(botId)
-    bot_name = bot_info[0]
-    channel_access_token = bot_info[1]
-    gpt_url = bot_info[3]
-
+    bot_name = bot_info["name"]
+    channel_access_token = bot_info["channel_access_token"]
+    gpt_url = bot_info["gpt_webhook_url"]
 
     # ユーザーからのメッセージを取得
     for i,event in enumerate(request.get_json()['events']):
@@ -218,11 +217,11 @@ def lineWebhook():
 # プッシュメッセージ送信用のエンドポイント
 @app.route('/pushMessage', methods=['POST'])
 def pushMessage():
-    use_account = [account for account in BOT_INFOS.get_all() if account[4] == True]
+    use_account = [account for account in BOT_INFOS.get_all() if account["in_group"] == True]
     if len(use_account) == 0:
         return "error", 400
     use_account = use_account[0]
-    channel_access_token = use_account[1]
+    channel_access_token = use_account["channel_access_token"]
 
     # プッシュメッセージを送信
     request_json:dict = request.get_json()
@@ -240,7 +239,7 @@ def pushMessage():
 # 動作テスト用エンドポイント
 @app.route("/test")
 def test():
-    use_account = [account for account in BOT_INFOS.get_all() if account[4] == True]
+    use_account = [account for account in BOT_INFOS.get_all() if account["in_group"] == True]
     if len(use_account) == 0:
         return "error", 400
     use_account = use_account[0]
