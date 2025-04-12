@@ -42,6 +42,7 @@ def add_row():
     data = request.get_json()
     # Extract required fields
     id = data.get('id')
+    id = int(id)
     bot_name = data.get('bot_name')
     channel_access_token = data.get('channel_access_token')
     channel_secret = data.get('channel_secret')
@@ -66,14 +67,16 @@ def add_row():
 @app.route('/get/<id>', methods=['GET'])
 def get_row(id):
     global database
+    id = int(id)
     entry = database[database['id'] == id]
     if entry.empty:
-        return jsonify({'error': f'ID not found, id:{id} type(id):{type(id)}, id column type is {database["id"].dtype}'}), 404
+        return jsonify({'error': f'ID not found, id:{id}'}), 404
     return jsonify(entry.iloc[0].to_dict()), 200
 
 @app.route('/delete/<id>', methods=['DELETE'])
 def delete_row(id):
     global database
+    id = int(id)
     if id in database['id'].values:
         database = database[database['id'] != id].reset_index(drop=True)
         return jsonify({'message': 'Entry deleted successfully'}), 200
@@ -87,6 +90,7 @@ def list_rows():
 @app.route('/update_row/<id>/<column>', methods=['GET'])  # Updated function name
 def update_value(id, column):  # Updated function name
     global database
+    id = int(id)
     if id not in database['id'].values:
         return jsonify({'error': 'ID not found'}), 404
     if column not in database.columns:
