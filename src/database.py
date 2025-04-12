@@ -34,7 +34,7 @@ init_database_from_gas()
 
 @app.route('/overwrite_all')
 def overwrite_all():
-    init_database_from_gas
+    init_database_from_gas()
     return jsonify({'message': 'All bot info updated successfully'}), 200
 
 @app.route('/add', methods=['POST'])

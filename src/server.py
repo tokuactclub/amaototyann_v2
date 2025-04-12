@@ -26,29 +26,24 @@ logger = getLogger(__name__)
 
 GAS_URL = os.getenv('GAS_URL')
 
-# botの情報を取得する.以下の形式の二次元配列である。詳細はスプレッドシート参照
-# bot_name, channnel_access_token, channel_secret, gpt_webhook_url, in_group
-# [ [ 'あまおとちゃん', '', '', '', false ],
-#   [ 'あまおとくん', '', '', '', false ],
-#   [ 'あまおとママ', '', '', '', false ],
-#   [ 'あまおとパパ', '', '', '', false ] ]
 
 # gasから取得する
 BOT_INFOS = BotInfo()
 
 
 # サーバー停止を阻止し常時起動させるスクリプト
-# 定期的にbootエンドポイントにアクセスする
+# 同時にデータベースのバックアップを行う
 
 # threadsで実行するための処理
 def boot_server():
     while True:
         try:
-            url = "https://amaotowebhook.onrender.com/boot"
+            url = "https://amaotowebhook.onrender.com/backupDatabase"
             requests.post(url)
         except Exception as e:
             logger.error(e)
         time.sleep(60 * 5)
+
 server_boot_script_running = os.getenv("SERVER_BOOT_SCRIPT_RUNNING")
 if  not server_boot_script_running or server_boot_script_running == "False":
     # 別ワーカーで実行されていない場合のみ起動
@@ -101,12 +96,30 @@ def transcribeWebhook(request, url, body=None):
 # Flaskのインスタンスを作成
 app = Flask(__name__)
 
-# サーバーを起動させるためのエンドポイント
-@app.route('/boot', methods=['POST'])
-def boot():
-    logger.info("boot")
-    return "boot"
+# databaseをスプレッドシートにバックアップするためのスクリプト
+@app.route('/backupDatabase', methods=['POST'])
+def backup_database():
+    logger.info("backup database")
+    if BOT_INFOS.is_updated == False:
+        return "not need to backup", 200
+    # 現在のdbを取得
+    db = BOT_INFOS.get_all()
+    # スプレッドシート用に変換
+    db = list(map(lambda x: [x["bot_name"], x["channel_access_token"], x["channel_secret"], x["gpt_webhook_url"], x["in_group"]], db))
 
+    # スプレッドシートに書き込み
+    response = requests.post(
+        GAS_URL,
+        json={"cmd":"updateDatabase", "options": {"bot_info": db}}
+    )
+    
+    if response.text == "success":
+        logger.info("backup success")
+        BOT_INFOS.is_updated = False
+        return "success"
+    else:
+        logger.error("backup error")
+        return "error"
 
 @app.route('/')
 def hello_world():

@@ -11,6 +11,9 @@ logger = getLogger(__name__)
 class BotInfo():
     def __init__(self):
         self.database_url = os.getenv("DATABASE_URL")
+        
+        # スプレッドシートの値を取得後に更新されたかどうか
+        self.is_updated - False
 
     def get(self, id):
         url = f"{self.database_url}/get/{id}"
@@ -22,6 +25,7 @@ class BotInfo():
             return None
     
     def update(self, id, column, value):
+        self.is_updated = True
         url = f"{self.database_url}/update/{id}/{column}/"
         response = requests.get(url, params={"value": value})
         if response.status_code == 200:
