@@ -57,3 +57,6 @@ Then, start the script with:
 ```bash
 ./start.sh
 ```
+
+main server is on http://localhost:8000
+database server is on http://localhost:5000
