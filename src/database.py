@@ -32,12 +32,12 @@ def init_database_from_gas():
 
 init_database_from_gas()
 
-@app.route('/overwrite_all')
+@app.route('/overwrite_all/')
 def overwrite_all():
     init_database_from_gas()
     return jsonify({'message': 'All bot info updated successfully'}), 200
 
-@app.route('/add', methods=['POST'])
+@app.route('/add/', methods=['POST'])
 def add_row():
     data = request.get_json()
     # Extract required fields
@@ -64,7 +64,7 @@ def add_row():
     database = pd.concat([database, new_entry], ignore_index=True)
     return jsonify({'message': 'Entry added successfully'}), 201
 
-@app.route('/get/<id>', methods=['GET'])
+@app.route('/get/<id>/', methods=['GET'])
 def get_row(id):
     global database
     id = int(id)
@@ -73,7 +73,7 @@ def get_row(id):
         return jsonify({'error': f'ID not found, id:{id}'}), 404
     return jsonify(entry.iloc[0].to_dict()), 200
 
-@app.route('/delete/<id>', methods=['DELETE'])
+@app.route('/delete/<id>/', methods=['DELETE'])
 def delete_row(id):
     global database
     id = int(id)
@@ -82,7 +82,7 @@ def delete_row(id):
         return jsonify({'message': 'Entry deleted successfully'}), 200
     return jsonify({'error': 'ID not found'}), 404
 
-@app.route('/list', methods=['GET'])
+@app.route('/list/', methods=['GET'])
 def list_rows():
     global database
     return jsonify(database.to_dict(orient='records')), 200
