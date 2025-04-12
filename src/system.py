@@ -13,7 +13,7 @@ class BotInfo():
         self.database_url = os.getenv("DATABASE_URL")
         
         # スプレッドシートの値を取得後に更新されたかどうか
-        self.is_updated - False
+        self.is_updated = False
 
     def get(self, id):
         url = f"{self.database_url}/get/{id}"
