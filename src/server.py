@@ -71,7 +71,7 @@ def backup_database():
     # スプレッドシートに書き込み
     response = requests.post(
         GAS_URL,
-        json={"cmd":"updateDatabase", "options": {"bot_info": db}}
+        json={"cmd":"setBotInfo", "options": {"bot_info": db}}
     )
     
     if response.text == "success":
