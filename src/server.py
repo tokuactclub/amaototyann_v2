@@ -18,6 +18,12 @@ if not is_render_server or is_render_server == "False":
     from dotenv import load_dotenv
     load_dotenv()   
 
+# loggerの設定
+from logging import getLogger, config
+with open("src/log_config.json", "r") as f:
+    config.dictConfig(json.load(f))
+logger = getLogger(__name__)
+
 GAS_URL = os.getenv('GAS_URL')
 
 # botの情報を取得する.以下の形式の二次元配列である。詳細はスプレッドシート参照
@@ -41,7 +47,7 @@ def boot_server():
             url = "https://amaotowebhook.onrender.com/boot"
             requests.post(url)
         except Exception as e:
-            print(e)
+            logger.error(e)
         time.sleep(60 * 5)
 server_boot_script_running = os.getenv("SERVER_BOOT_SCRIPT_RUNNING")
 if  not server_boot_script_running or server_boot_script_running == "False":
@@ -63,15 +69,15 @@ def transcribeWebhook(request, url, body=None):
         Response: 転送先からのレスポンス
     """
     method = request.method
-    print(f"headersType:{type(request.headers)}")
+    logger.info(f"headersType:{type(request.headers)}")
     headers = {key: value for key, value in dict(request.headers).items() if key != 'Host'} 
     if(not body):#bodyを指定されなければeventのbodyを利用（本来の挙動）
         body = request.json
-
-    print(f"Method: {method}Type:{type(method)}")
-    print(f"URL : {url}Type:{type(url)}")
-    print(f"Headers: {headers}Type:{type(headers)}")
-    print(f"Body: {body}Type:{type(body)}")
+    
+    logger.info(f"Method: {method}Type:{type(method)}")
+    logger.info(f"URL : {url}Type:{type(url)}")
+    logger.info(f"Headers: {headers}Type:{type(headers)}")
+    logger.info(f"Body: {body}Type:{type(body)}")
 
     try:
         # Reconstruct headers and forward the request
@@ -83,12 +89,12 @@ def transcribeWebhook(request, url, body=None):
             json=json.loads(json.dumps(body)),
         )
 
-        print('Forwarded Data:', response)
-        print('HTTP Status Code:', response.status_code)
+        logger.info('Forwarded Data:', response)
+        logger.info('HTTP Status Code:', response.status_code)
 
         return 'Data forwarded successfully', 200
     except Exception as e:
-        print('Error:', e)
+        logger.error('Error:', e)
         return 'Failed to forward data', 500
 
     
@@ -98,7 +104,7 @@ app = Flask(__name__)
 # サーバーを起動させるためのエンドポイント
 @app.route('/boot', methods=['POST'])
 def boot():
-    print("boot")
+    logger.info("boot")
     return "boot"
 
 
@@ -107,7 +113,7 @@ def hello_world():
     return 'Hello, World!'
 
 def react_message_webhook(request, channel_access_token, gpt_url, event_index):
-    print("got react message webhook")
+    logger.info("got react message webhook")
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
     
@@ -131,15 +137,14 @@ def react_message_webhook(request, channel_access_token, gpt_url, event_index):
 
     if not message.startswith("!"):
         return "finish", 200
-    print("start command process")
-    
+    logger.info("start command process")
     # コマンド処理
     Commands(channel_access_token, request= request).process(message)
 
     return
 
 def react_join_webhook(request, channel_access_token, bot_name, event_index):
-    print("got join webhook")
+    logger.info("got join webhook")
     botId = int(request.args.get("botId"))
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
@@ -177,7 +182,7 @@ def react_join_webhook(request, channel_access_token, bot_name, event_index):
     return
 
 def react_left_webhook(request):
-    print("got left webhook")
+    logger.info("got left webhook")
     botId = int(request.args.get("botId"))
     
     # グループから抜けたことを記録
@@ -186,7 +191,7 @@ def react_left_webhook(request):
 # lineWebhook用のエンドポイント
 @app.route('/lineWebhook', methods=['POST'])
 def lineWebhook():
-    print("got LINE webhook")
+    logger.info("got LINE webhook, webhook type is on next line")
     # ウェブフックを送信してきたアカウントを?botId=で取得
     botId = int(request.args.get("botId"))
 
@@ -205,6 +210,8 @@ def lineWebhook():
             react_join_webhook(request, channel_access_token, bot_name, i)
         elif event['type'] == 'leave': # グループ退出イベント
             react_left_webhook(request)
+    else:
+        logger.info("not valid webhook type") 
 
     return "finish", 200
 

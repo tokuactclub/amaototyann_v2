@@ -4,7 +4,6 @@ import requests
 from pprint import pprint
 from datetime import datetime, timezone, timedelta
 import os
-from logging import getLogger, config
 import json
 # ローカル実行の場合は相対パスでimportする
 try:
@@ -16,6 +15,7 @@ except:
 GAS_URL = os.getenv('GAS_URL')
 
 # loggerの設定
+from logging import getLogger, config
 with open("src/log_config.json", "r") as f:
     config.dictConfig(json.load(f))
 logger = getLogger(__name__)
