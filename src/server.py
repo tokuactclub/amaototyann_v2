@@ -58,7 +58,7 @@ if  not server_boot_script_running or server_boot_script_running == "False":
 app = Flask(__name__)
 
 # databaseをスプレッドシートにバックアップするためのスクリプト
-@app.route('/backupDatabase', methods=['GET'])
+@app.route('/backupDatabase/', methods=['GET'])
 def backup_database():
     logger.info("backup database")
     if BOT_INFOS.is_updated == False:
@@ -163,7 +163,7 @@ def react_left_webhook(request):
     BOT_INFOS.update(botId, "in_group", False)
 
 # lineWebhook用のエンドポイント
-@app.route('/lineWebhook', methods=['POST'])
+@app.route('/lineWebhook/', methods=['POST'])
 def lineWebhook():
     logger.info("got LINE webhook, webhook type is on next line")
     # ウェブフックを送信してきたアカウントを?botId=で取得
@@ -189,7 +189,7 @@ def lineWebhook():
     return "finish", 200
 
 # プッシュメッセージ送信用のエンドポイント
-@app.route('/pushMessage', methods=['POST'])
+@app.route('/pushMessage/', methods=['POST'])
 def pushMessage():
     use_account = [account for account in BOT_INFOS.get_all() if account["in_group"] == True]
     if len(use_account) == 0:
