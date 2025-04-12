@@ -111,6 +111,8 @@ def update_value(id, column):  # Updated function name
     value = request.args.get('value')
     if value is None:
         return jsonify({'error': 'Value is required'}), 400
+    if column == 'in_group':
+        value = True if value.lower() == 'true' else False
     database.loc[database['id'] == id, column] = value
     return jsonify({'message': 'Value updated successfully'}), 200
 if __name__ == '__main__':
