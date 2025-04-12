@@ -197,7 +197,7 @@ def lineWebhook():
 
     # botIdからbotの情報を取得
     bot_info = BOT_INFOS.get(botId)
-    bot_name = bot_info["name"]
+    bot_name = bot_info["bot_name"]
     channel_access_token = bot_info["channel_access_token"]
     gpt_url = bot_info["gpt_webhook_url"]
 
