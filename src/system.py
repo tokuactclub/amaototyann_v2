@@ -12,8 +12,6 @@ class BotInfo():
     def __init__(self):
         self.database_url = os.getenv("DATABASE_URL")
         
-        # スプレッドシートの値を取得後に更新されたかどうか
-        self.is_updated = False
 
     def get(self, id):
         url = f"{self.database_url}/get/{id}"
@@ -25,7 +23,7 @@ class BotInfo():
             return None
     
     def update(self, id, column, value):
-        self.is_updated = True
+        
         url = f"{self.database_url}/update_value/{id}/{column}/"
         response = requests.get(url, params={"value": value})
         if response.status_code == 200:
@@ -41,6 +39,26 @@ class BotInfo():
             return response.json()
         else:
             logger.error(f"Failed to get all data: {response.status_code} - {response.text}")
+            return None
+    
+    @property
+    def is_updated(self):
+        url = f"{self.database_url}/is_updated/"
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()['is_updated']
+        else:
+            logger.error(f"Failed to check update status: {response.status_code} - {response.text}")
+            return None
+        
+    @is_updated.setter
+    def is_updated(self, value):
+        url = f"{self.database_url}/is_updated/"
+        response = requests.get(url, params={"value": value})
+        if response.status_code == 200:
+            return response.json()['is_updated']
+        else:
+            logger.error(f"Failed to check update status: {response.status_code} - {response.text}")
             return None
         
 # webhookを転送する関数

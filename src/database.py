@@ -6,6 +6,7 @@ import requests
 
 app = Flask(__name__)
 global database
+IS_UPDATED = False
 
 def init_database_from_gas():
     """Update all bot info from GAS and update the in-memory database."""
@@ -31,6 +32,18 @@ def init_database_from_gas():
         database = pd.concat([database, new_entry], ignore_index=True)
 
 init_database_from_gas()
+
+@app.route('/is_updated/', methods=['GET'])
+def is_updated():
+    """Check if the database has been updated."""
+    value:str = request.args.get('value')
+    global IS_UPDATED
+    if value and value.lower() == 'true':
+        IS_UPDATED = True
+    elif value and value.lower() == 'false':
+        IS_UPDATED = False
+    
+    return jsonify({'is_updated': IS_UPDATED}), 200
 
 @app.route('/overwrite_all/')
 def overwrite_all():
