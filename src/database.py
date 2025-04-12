@@ -68,7 +68,7 @@ def get_row(id):
     global database
     entry = database[database['id'] == id]
     if entry.empty:
-        return jsonify({'error': f'ID not found, id:{id} type(id):{type(id)}'}), 404
+        return jsonify({'error': f'ID not found, id:{id} type(id):{type(id)}, id column type is {database["id"].dtype}'}), 404
     return jsonify(entry.iloc[0].to_dict()), 200
 
 @app.route('/delete/<id>', methods=['DELETE'])
