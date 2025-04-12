@@ -58,7 +58,7 @@ if  not server_boot_script_running or server_boot_script_running == "False":
 app = Flask(__name__)
 
 # databaseをスプレッドシートにバックアップするためのスクリプト
-@app.route('/backupDatabase', methods=['POST'])
+@app.route('/backupDatabase', methods=['GET'])
 def backup_database():
     logger.info("backup database")
     if BOT_INFOS.is_updated == False:
