@@ -39,7 +39,7 @@ def boot_server():
     while True:
         try:
             url = "https://amaotowebhook.onrender.com/backupDatabase/"
-            requests.post(url)
+            requests.get(url)
         except Exception as e:
             logger.error(e)
         # time.sleep(60 * 5)
