@@ -23,7 +23,7 @@ class BotInfo():
             return None
     
     def update(self, id, column, value):
-        
+        self.is_updated = True
         url = f"{self.database_url}/update_value/{id}/{column}/"
         response = requests.get(url, params={"value": value})
         if response.status_code == 200:
