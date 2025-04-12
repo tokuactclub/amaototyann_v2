@@ -85,7 +85,10 @@ def backup_database():
 
 @app.route('/')
 def hello_world():
-    return 'Hello, World!'
+    # app.logを返す
+    with open("app.log", "r") as f:
+        log = f.read()
+    return log
 
 def react_message_webhook(request, channel_access_token, gpt_url, event_index):
     logger.info("got react message webhook")
