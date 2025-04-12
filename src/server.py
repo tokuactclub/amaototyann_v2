@@ -66,7 +66,7 @@ def backup_database():
     # 現在のdbを取得
     db = BOT_INFOS.get_all()
     # スプレッドシート用に変換
-    db = list(map(lambda x: [x["bot_name"], x["channel_access_token"], x["channel_secret"], x["gpt_webhook_url"], x["in_group"]], db))
+    db = list(map(lambda x: [x["id"], x["bot_name"], x["channel_access_token"], x["channel_secret"], x["gpt_webhook_url"], x["in_group"]], db))
 
     # スプレッドシートに書き込み
     response = requests.post(
