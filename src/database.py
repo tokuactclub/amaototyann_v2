@@ -87,7 +87,7 @@ def list_rows():
     global database
     return jsonify(database.to_dict(orient='records')), 200
 
-@app.route('/update_row/<id>/<column>', methods=['GET'])  # Updated function name
+@app.route('/update_value/<id>/<column>/', methods=['GET'])  # Updated function name
 def update_value(id, column):  # Updated function name
     global database
     id = int(id)

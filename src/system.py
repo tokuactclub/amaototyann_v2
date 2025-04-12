@@ -26,7 +26,7 @@ class BotInfo():
     
     def update(self, id, column, value):
         self.is_updated = True
-        url = f"{self.database_url}/update/{id}/{column}/"
+        url = f"{self.database_url}/update_value/{id}/{column}/"
         response = requests.get(url, params={"value": value})
         if response.status_code == 200:
             return response.json()
@@ -83,3 +83,16 @@ def transcribeWebhook(request, url, body=None):
     except Exception as e:
         logger.error('Error:', e)
         return 'Failed to forward data', 500
+    
+if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()       
+
+
+    # BotInfoのテスト
+    bot_info = BotInfo()
+    
+    # IDが1のデータのnameを更新
+    updated_data = bot_info.update(1, "in_group", False)
+    pprint(updated_data)
+    
