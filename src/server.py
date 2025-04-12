@@ -187,6 +187,22 @@ def react_join_webhook(request, channel_access_token, bot_name, event_index):
         BOT_INFO_VERSION = new_version
     return
 
+def react_left_webhook(request):
+    print("got left webhook")
+    botId = int(request.args.get("botId"))
+    
+    # グループから抜けたことを記録
+    BOT_INFOS[botId][4] = False
+    BOT_INFOS.send()
+
+    # 更新したので環境変数のバージョンを更新
+    # 同期ズレとかも意識したほうが良さそうだけど、そもそもそんなに頻繁に更新しないので今回はこのまま
+    os_bot_info_version = int(os.getenv("BOT_INFO_VERSION"))
+    new_version = os_bot_info_version + 1
+    os.environ["BOT_INFO_VERSION"] = str(new_version)
+    global BOT_INFO_VERSION
+    BOT_INFO_VERSION = new_version
+
 # lineWebhook用のエンドポイント
 @app.route('/lineWebhook', methods=['POST'])
 def lineWebhook():
@@ -211,6 +227,8 @@ def lineWebhook():
             react_message_webhook(request, channel_access_token, gpt_url, i)
         elif event['type'] == 'join': # グループ参加イベント
             react_join_webhook(request, channel_access_token, bot_name, i)
+        elif event['type'] == 'leave': # グループ退出イベント
+            react_left_webhook(request)
 
     return "finish", 200
 
