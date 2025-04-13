@@ -32,13 +32,14 @@ class CommandsScripts:
     HELLO = "!hello"
     FINISH = "!finish"
 class Commands(object):
-    def __init__(self,channel_access_token, request, debug=False):
+    def __init__(self,channel_access_token, request, botId = None, debug=False):
         """基本的にwebhookのコマンドを処理し、リプライメッセージで応答する。
         ただし一部関数はwebhookを介さずともpushメッセージにより対応する。
 
         Args:
             channel_access_token (str): linebotのチャンネルアクセストークン
             request (bool, optional): webhookやpostで受け取ったrequestそのもの
+            botId (str, optional): botのID. messageからコマンドを実行する際必要
             debug (bool, optional): デバッグモードかどうか
         """
         if debug:
@@ -51,7 +52,7 @@ class Commands(object):
         
         if self.is_webhook_request: #requestがwebhookの場合
             logger.info("webhook request")
-            self.botId = int(request.args.get("botId"))
+            self.botId = int(botId)
             self.reply_token = self.webhook_body['events'][0]['replyToken']
         else:
             logger.info("push message")

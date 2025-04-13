@@ -120,7 +120,7 @@ def react_message_webhook(request, botId, event_index):
         return "finish", 200
     logger.info("start command process")
     # コマンド処理
-    Commands(channel_access_token, request= request).process(message)
+    Commands(channel_access_token, request= request, botId=botId).process(message)
 
     return
 
