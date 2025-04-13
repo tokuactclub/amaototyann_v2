@@ -33,6 +33,11 @@ def init_database_from_gas():
 
 init_database_from_gas()
 
+@app.before_request
+def log_request_info():
+    logger.info(f"Method: {request.method}, Path: {request.path}")
+
+
 @app.route('/is_updated/', methods=['GET'])
 def is_updated():
     """Check if the database has been updated."""
