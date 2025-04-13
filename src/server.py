@@ -30,9 +30,10 @@ BOT_INFOS = BotInfo()
 
 # threadsで実行するための処理
 def boot_server():
+    server_url = os.getenv("SERVER_URL")
     while True:
         try:
-            url = "https://amaotowebhook.onrender.com/backupDatabase/"
+            url = os.path.join(server_url, "backupDatabase/")
             requests.get(url)
         except Exception as e:
             logger.error(e)
@@ -58,9 +59,13 @@ def backup_database():
     global BOT_INFOS
     logger.info("backup database")
     if BOT_INFOS.is_updated == False:
+        logger.info("not need to backup")
         return "not need to backup", 200
     # 現在のdbを取得
     db = BOT_INFOS.get_all()
+    if db is None:
+        logger.error("database is None")
+        return "error", 500
     print("--" * 30, db)
     # スプレッドシート用に変換
     db = list(map(lambda x: [x["id"], x["bot_name"], x["channel_access_token"], x["channel_secret"], x["gpt_webhook_url"], x["in_group"]], db))
