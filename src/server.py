@@ -6,7 +6,7 @@ import threading
 
 from linebot import LineBotApi # type: ignore
 from linebot.models import TextSendMessage # type: ignore
-import json
+
 
 from src.command import Commands, CommandsScripts
 from src.system import BotInfo, transcribeWebhook, load_dotenv, init_logger
@@ -52,6 +52,7 @@ if  not server_boot_script_running or server_boot_script_running == "False":
     
 # Flaskのインスタンスを作成
 app = Flask(__name__)
+app.strict_slashes = False
 
 # databaseをスプレッドシートにバックアップするためのスクリプト
 @app.route('/backupDatabase/', methods=['GET'])

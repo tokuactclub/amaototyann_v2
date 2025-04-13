@@ -7,6 +7,7 @@ from system import init_logger
 logger = init_logger()
 
 app = Flask(__name__)
+app.strict_slashes = False
 global database
 IS_UPDATED = False
 
