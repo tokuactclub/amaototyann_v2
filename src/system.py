@@ -29,7 +29,7 @@ class BotInfo():
         
 
     def get(self, id):
-        url = os.path.join(self.database_url, "get", str(id))
+        url = os.path.join(self.database_url, "get", str(id) + "/")
         response = requests.get(url)
         if response.status_code == 200:
             return response.json()
@@ -39,7 +39,7 @@ class BotInfo():
     
     def update(self, id, column, value):
         self.is_updated = True
-        url = os.path.join(self.database_url, "update_value", str(id), column)
+        url = os.path.join(self.database_url, "update_value", str(id), column+"/")
         response = requests.get(url, params={"value": value})
         if response.status_code == 200:
             return response.json()
@@ -48,7 +48,7 @@ class BotInfo():
             return None
         
     def get_all(self):
-        url = os.path.join(self.database_url, "list")
+        url = os.path.join(self.database_url, "list/")
         response = requests.get(url)
         print(f"get_all response: {response}")
         if response.status_code == 200:
@@ -59,7 +59,7 @@ class BotInfo():
     
     @property
     def is_updated(self):
-        url = os.path.join(self.database_url, "is_updated") 
+        url = os.path.join(self.database_url, "is_updated/") 
         response = requests.get(url)
         if response.status_code == 200:
             return response.json()['is_updated']
@@ -69,7 +69,7 @@ class BotInfo():
         
     @is_updated.setter
     def is_updated(self, value):
-        url = os.path.join(self.database_url, "is_updated") 
+        url = os.path.join(self.database_url, "is_updated/") 
         response = requests.get(url, params={"value": value})
         if response.status_code == 200:
             return response.json()['is_updated']
