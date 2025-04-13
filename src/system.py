@@ -8,6 +8,21 @@ with open("src/log_config.json", "r") as f:
     config.dictConfig(json.load(f))
 logger = getLogger("logger")
 
+def load_dotenv():
+    """.envファイルを読み込む関数
+    """
+    is_render_server = os.getenv("IS_RENDER_SERVER")
+    if not is_render_server or is_render_server == "False":
+        from dotenv import load_dotenv as ld # type: ignore
+        ld(override=True)
+load_dotenv()
+
+def init_logger():
+    global logger
+    return logger
+    
+
+
 class BotInfo():
     def __init__(self):
         self.database_url = os.getenv("DATABASE_URL")

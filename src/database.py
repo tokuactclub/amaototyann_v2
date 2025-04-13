@@ -2,7 +2,9 @@ from flask import Flask, request, jsonify # type: ignore
 import pandas as pd # type: ignore
 import os
 import requests # type: ignore
+from system import init_logger
 
+logger = init_logger()
 
 app = Flask(__name__)
 global database

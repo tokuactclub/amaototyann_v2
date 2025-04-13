@@ -9,20 +9,14 @@ from linebot.models import TextSendMessage # type: ignore
 import json
 
 from src.command import Commands, CommandsScripts
-from src.system import BotInfo, transcribeWebhook
+from src.system import BotInfo, transcribeWebhook, load_dotenv, init_logger
 from src import messages
+
 # ローカル開発の場合.envファイルから環境変数を読み込む
-# IS_RENDER_SERVER が存在しない場合はローカル開発と判断
-is_render_server = os.getenv("IS_RENDER_SERVER")
-if not is_render_server or is_render_server == "False":
-    from dotenv import load_dotenv # type: ignore
-    load_dotenv()   
+load_dotenv()
 
 # loggerの設定
-from logging import getLogger, config
-with open("src/log_config.json", "r") as f:
-    config.dictConfig(json.load(f))
-logger = getLogger("logger")
+logger = init_logger()
 
 GAS_URL = os.getenv('GAS_URL')
 
