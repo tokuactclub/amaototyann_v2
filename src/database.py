@@ -1,7 +1,7 @@
-from flask import Flask, request, jsonify
-import pandas as pd
+from flask import Flask, request, jsonify # type: ignore
+import pandas as pd # type: ignore
 import os
-import requests
+import requests # type: ignore
 
 
 app = Flask(__name__)
@@ -98,6 +98,8 @@ def delete_row(id):
 @app.route('/list/', methods=['GET'])
 def list_rows():
     global database
+    print("="*20)
+    print("got list request")
     return jsonify(database.to_dict(orient='records')), 200
 
 @app.route('/update_value/<id>/<column>/', methods=['GET'])  # Updated function name

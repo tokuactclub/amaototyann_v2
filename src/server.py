@@ -1,11 +1,11 @@
-from flask import Flask, request, Response
+from flask import Flask, request, Response # type: ignore
 import os
-import requests
+import requests # type: ignore
 import time
 import threading
 
-from linebot import LineBotApi
-from linebot.models import TextSendMessage
+from linebot import LineBotApi # type: ignore
+from linebot.models import TextSendMessage # type: ignore
 import json
 
 from src.command import Commands, CommandsScripts
@@ -15,7 +15,7 @@ from src import messages
 # IS_RENDER_SERVER が存在しない場合はローカル開発と判断
 is_render_server = os.getenv("IS_RENDER_SERVER")
 if not is_render_server or is_render_server == "False":
-    from dotenv import load_dotenv
+    from dotenv import load_dotenv # type: ignore
     load_dotenv()   
 
 # loggerの設定

@@ -1,4 +1,4 @@
-import requests
+import requests # type: ignore
 import os
 from pprint import pprint
 import json
@@ -103,7 +103,7 @@ def transcribeWebhook(request, url, body=None):
         return 'Failed to forward data', 500
     
 if __name__ == "__main__":
-    from dotenv import load_dotenv
+    from dotenv import load_dotenv # type: ignore
     load_dotenv()       
 
 

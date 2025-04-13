@@ -1,6 +1,6 @@
-from linebot import LineBotApi
-from linebot.models import TextSendMessage
-import requests
+from linebot import LineBotApi # type: ignore
+from linebot.models import TextSendMessage # type: ignore
+import requests # type: ignore
 from pprint import pprint
 from datetime import datetime, timezone, timedelta
 import os

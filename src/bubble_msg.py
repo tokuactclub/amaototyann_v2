@@ -1,4 +1,4 @@
-from linebot.models import FlexSendMessage
+from linebot.models import FlexSendMessage # type: ignore
 class taskBubbleMsg:
     """締切りタスクのバブルメッセージを作成するクラス
     """
