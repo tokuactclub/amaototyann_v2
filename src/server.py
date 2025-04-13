@@ -90,10 +90,13 @@ def hello_world():
         log = f.read()
     return Response(log, mimetype='text/plain')
 
-def react_message_webhook(request, channel_access_token, gpt_url, event_index):
+def react_message_webhook(request, botId, event_index):
     logger.info("got react message webhook")
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
+    bot_info = BOT_INFOS.get(botId)
+    channel_access_token = bot_info["channel_access_token"]
+    gpt_url = bot_info["gpt_webhook_url"]
     
     message:str = request_json['events'][event_index]['message']['text']
 
@@ -121,11 +124,14 @@ def react_message_webhook(request, channel_access_token, gpt_url, event_index):
 
     return
 
-def react_join_webhook(request, channel_access_token, bot_name, event_index):
+def react_join_webhook(request, botId, event_index):
     logger.info("got join webhook")
-    botId = int(request.args.get("botId"))
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
+
+    bot_info = BOT_INFOS.get(botId)
+    channel_access_token = bot_info["channel_access_token"]
+    bot_name = bot_info["bot_name"]
     
     # グループの人数を取得
     line_bot_api = LineBotApi(channel_access_token)
@@ -159,33 +165,25 @@ def react_join_webhook(request, channel_access_token, bot_name, event_index):
         BOT_INFOS.update(botId, "in_group", True)
     return
 
-def react_left_webhook(request):
-    logger.info("got left webhook")
-    botId = int(request.args.get("botId"))
-    
-    # グループから抜けたことを記録
-    BOT_INFOS.update(botId, "in_group", False)
 
 # lineWebhook用のエンドポイント
 @app.route('/lineWebhook/<botId>/', methods=['POST'])
 def lineWebhook(botId):
     logger.info("got LINE webhook, webhook type is on next line")
 
-    # botIdからbotの情報を取得
-    bot_info = BOT_INFOS.get(botId)
-    bot_name = bot_info["bot_name"]
-    channel_access_token = bot_info["channel_access_token"]
-    gpt_url = bot_info["gpt_webhook_url"]
-
     # ユーザーからのメッセージを取得
     for i,event in enumerate(request.get_json()['events']):
         if event['type'] == 'message': # メッセージイベント
-            react_message_webhook(request, channel_access_token, gpt_url, i)
+            react_message_webhook(request, botId, i)
+
         elif event['type'] == 'join': # グループ参加イベント
-            react_join_webhook(request, channel_access_token, bot_name, i)
+            react_join_webhook(request, botId, i)
+
         elif event['type'] == 'leave': # グループ退出イベント
-            react_left_webhook(request)
-    else:
+            logger.info("got left webhook")    
+            # グループから抜けたことを記録
+            BOT_INFOS.update(botId, "in_group", False)
+          
         logger.info("not valid webhook type") 
 
     return "finish", 200

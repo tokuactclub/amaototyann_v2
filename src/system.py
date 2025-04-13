@@ -37,7 +37,7 @@ class BotInfo():
             logger.error(f"Failed to get data for ID {id} at URL {url}: {response.status_code} - {response.text}")
             return None
     
-    def update(self, id, column, value):
+    def update(self, id:str|int, column, value):
         self.is_updated = True
         url = os.path.join(self.database_url, "update_value", str(id), column+"/")
         response = requests.get(url, params={"value": value})
