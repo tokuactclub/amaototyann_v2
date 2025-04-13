@@ -57,9 +57,7 @@ app = Flask(__name__)
 @app.route('/backupDatabase/', methods=['GET'])
 def backup_database():
     global BOT_INFOS
-    logger.info("backup database")
     if BOT_INFOS.is_updated == False:
-        logger.info("not need to backup")
         return "not need to backup", 200
     # 現在のdbを取得
     db = BOT_INFOS.get_all()
