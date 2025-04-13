@@ -128,13 +128,13 @@ class Commands(object):
                 events
                 )
             events = list(events)
-            print(events)
+            logger.info(events)
             if len(events)>0:
                 self._send_text_message("\n\n".join(events))
             elif self.is_webhook_request:
                 self._send_text_message(messages.NO_PRACTICE)
         except Exception as e:
-            print(e)
+            logger.exception(e)
 
     def _reminder(self):
         try:
@@ -180,7 +180,7 @@ class Commands(object):
             # メッセージを送信
             self._send_bubble_message(msg_task.getMessages())
         except Exception as e:
-            print(e)
+            logger.exception(e)
 
     def _finish_event(self, id):
         try:
@@ -194,11 +194,11 @@ class Commands(object):
             else:
                 self._send_text_message("エラーで通知を終われなかったよ！ごめんね！")
         except Exception as e:
-            print(e)
+            logger.exception(e)
     
     def _change_group(self):
         group_id = self.webhook_body['events'][0]['source']['groupId']
-        print(f"change group: {group_id}")
+        logger.info(f"change group: {group_id}")
 
         # group_id から lineのapiでgroup_name を取得
         group_name = self.line_bot_api.get_group_summary(group_id).group_name
@@ -222,7 +222,7 @@ class Commands(object):
 
     def _send_text_message(self, text):
         if self.debug:
-            print(text)
+            logger.info(text)
         elif self.is_webhook_request:
             self.line_bot_api.reply_message(
                 self.reply_token, TextSendMessage(text=text)
@@ -233,7 +233,7 @@ class Commands(object):
             )
     def _send_bubble_message(self, bubble):
         if self.debug:
-            pprint(bubble)
+            logger.info(bubble)
         elif self.is_webhook_request:
             self.line_bot_api.reply_message(
                 self.reply_token, bubble
