@@ -15,7 +15,6 @@ def load_dotenv():
     if not is_render_server or is_render_server == "False":
         from dotenv import load_dotenv as ld # type: ignore
         ld(override=True)
-load_dotenv()
 
 def init_logger():
     global logger
@@ -26,54 +25,56 @@ def init_logger():
 class BotInfo():
     def __init__(self):
         self.database_url = os.getenv("DATABASE_URL")
+        logger.info(f"BotInfo initialized to database. url: {self.database_url}")
         
 
     def get(self, id):
-        url = f"{self.database_url}/get/{id}"
+        url = os.path.join(self.database_url, "get", str(id))
         response = requests.get(url)
         if response.status_code == 200:
             return response.json()
         else:
-            logger.error(f"Failed to get data for ID {id}: {response.status_code} - {response.text}")
+            logger.error(f"Failed to get data for ID {id} at URL {url}: {response.status_code} - {response.text}")
             return None
     
     def update(self, id, column, value):
         self.is_updated = True
-        url = f"{self.database_url}/update_value/{id}/{column}/"
+        url = os.path.join(self.database_url, "update_value", str(id), column)
         response = requests.get(url, params={"value": value})
         if response.status_code == 200:
             return response.json()
         else:
-            logger.error(f"Failed to update data for ID {id}: {response.status_code} - {response.text}")
+            logger.error(f"Failed to update data for ID {id} at URL {url}: {response.status_code} - {response.text}")
             return None
         
     def get_all(self):
-        url = f"{self.database_url}/list/"
+        url = os.path.join(self.database_url, "list")
         response = requests.get(url)
+        print(f"get_all response: {response}")
         if response.status_code == 200:
             return response.json()
         else:
-            logger.error(f"Failed to get all data: {response.status_code} - {response.text}")
+            logger.error(f"Failed to get all data at URL {url}: {response.status_code} - {response.text}")
             return None
     
     @property
     def is_updated(self):
-        url = f"{self.database_url}/is_updated/"
+        url = os.path.join(self.database_url, "is_updated") 
         response = requests.get(url)
         if response.status_code == 200:
             return response.json()['is_updated']
         else:
-            logger.error(f"Failed to check update status: {response.status_code} - {response.text}")
+            logger.error(f"Failed to check update status at URL {url}: {response.status_code} - {response.text}")
             return None
         
     @is_updated.setter
     def is_updated(self, value):
-        url = f"{self.database_url}/is_updated/"
+        url = os.path.join(self.database_url, "is_updated") 
         response = requests.get(url, params={"value": value})
         if response.status_code == 200:
             return response.json()['is_updated']
         else:
-            logger.error(f"Failed to check update status: {response.status_code} - {response.text}")
+            logger.error(f"Failed to check update status at URL {url}: {response.status_code} - {response.text}")
             return None
         
 # webhookを転送する関数
@@ -117,8 +118,10 @@ def transcribeWebhook(request, url, body=None):
         logger.error('Error:', e)
         return 'Failed to forward data', 500
     
+
+
+
 if __name__ == "__main__":
-    from dotenv import load_dotenv # type: ignore
     load_dotenv()       
 
 
@@ -128,4 +131,3 @@ if __name__ == "__main__":
     # IDが1のデータのnameを更新
     updated_data = bot_info.update(1, "in_group", False)
     pprint(updated_data)
-    
