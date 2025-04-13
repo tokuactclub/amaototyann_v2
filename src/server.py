@@ -184,7 +184,8 @@ def lineWebhook(botId):
             # グループから抜けたことを記録
             BOT_INFOS.update(botId, "in_group", False)
           
-        logger.info("not valid webhook type") 
+        else:
+            logger.info("not valid webhook type") 
 
     return "finish", 200
 
