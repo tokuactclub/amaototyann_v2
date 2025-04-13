@@ -37,8 +37,8 @@ def boot_server():
             requests.get(url)
         except Exception as e:
             logger.error(e)
-        # time.sleep(60 * 5)
-        time.sleep(20)
+        time.sleep(60 * 5)
+        # time.sleep(20)
 
 server_boot_script_running = os.getenv("SERVER_BOOT_SCRIPT_RUNNING")
 if  not server_boot_script_running or server_boot_script_running == "False":
