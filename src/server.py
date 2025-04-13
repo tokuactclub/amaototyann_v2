@@ -167,11 +167,9 @@ def react_left_webhook(request):
     BOT_INFOS.update(botId, "in_group", False)
 
 # lineWebhook用のエンドポイント
-@app.route('/lineWebhook/', methods=['POST'])
-def lineWebhook():
+@app.route('/lineWebhook/<botId>/', methods=['POST'])
+def lineWebhook(botId):
     logger.info("got LINE webhook, webhook type is on next line")
-    # ウェブフックを送信してきたアカウントを?botId=で取得
-    botId = int(request.args.get("botId"))
 
     # botIdからbotの情報を取得
     bot_info = BOT_INFOS.get(botId)
