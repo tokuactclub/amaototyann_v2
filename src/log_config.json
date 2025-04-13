@@ -23,7 +23,7 @@
     },
 
     "loggers": {
-        "__main__": {
+        "logger": {
             "level": "DEBUG",
             "handlers": ["consoleHandler", "fileHandler"],
             "propagate": false

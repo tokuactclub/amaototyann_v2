@@ -18,7 +18,7 @@ GAS_URL = os.getenv('GAS_URL')
 from logging import getLogger, config
 with open("src/log_config.json", "r") as f:
     config.dictConfig(json.load(f))
-logger = getLogger(__name__)
+logger = getLogger("logger")
 
 
 # コマンドの文字列を格納するクラス

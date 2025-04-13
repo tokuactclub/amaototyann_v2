@@ -6,7 +6,7 @@ import json
 from logging import getLogger, config
 with open("src/log_config.json", "r") as f:
     config.dictConfig(json.load(f))
-logger = getLogger(__name__)
+logger = getLogger("logger")
 
 class BotInfo():
     def __init__(self):

@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, Response
 import os
 import requests
 import time
@@ -22,7 +22,7 @@ if not is_render_server or is_render_server == "False":
 from logging import getLogger, config
 with open("src/log_config.json", "r") as f:
     config.dictConfig(json.load(f))
-logger = getLogger(__name__)
+logger = getLogger("logger")
 
 GAS_URL = os.getenv('GAS_URL')
 
@@ -61,11 +61,13 @@ app = Flask(__name__)
 # databaseをスプレッドシートにバックアップするためのスクリプト
 @app.route('/backupDatabase/', methods=['GET'])
 def backup_database():
+    global BOT_INFOS
     logger.info("backup database")
     if BOT_INFOS.is_updated == False:
         return "not need to backup", 200
     # 現在のdbを取得
     db = BOT_INFOS.get_all()
+    print("--" * 30, db)
     # スプレッドシート用に変換
     db = list(map(lambda x: [x["id"], x["bot_name"], x["channel_access_token"], x["channel_secret"], x["gpt_webhook_url"], x["in_group"]], db))
 
@@ -86,9 +88,9 @@ def backup_database():
 @app.route('/')
 def hello_world():
     # app.logを返す
-    with open("app.log", "r") as f:
+    with open("logs/app.log", "r") as f:
         log = f.read()
-    return log
+    return Response(log, mimetype='text/plain')
 
 def react_message_webhook(request, channel_access_token, gpt_url, event_index):
     logger.info("got react message webhook")
@@ -239,4 +241,4 @@ def test():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port = 8000)
