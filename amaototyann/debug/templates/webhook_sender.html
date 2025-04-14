@@ -19,6 +19,11 @@
             max-width: 400px;
             text-align: center;
         }
+        pre {
+            white-space: pre-wrap; /* 改行を有効にする */
+            word-wrap: break-word; /* 長い単語を折り返す */
+            text-align: left; /* 左寄せにする */
+        }
     </style>
 </head>
 <body>
@@ -31,12 +36,15 @@
             {% endfor %}
         </select><br><br>
 
+        <label for="botId">Bot ID:</label><br>
+        <input type="number" id="botId" name="botId" value="{{ request.form.botId or 1 }}" required><br><br>
+
         {% if editable_fields %}
             <h3>Edit Template Fields:</h3>
             {% for key, value in editable_fields.items() %}
                 {% if key == 'message.text' %}
                     <label for="{{ key }}">{{ key }}:</label><br>
-                    <input type="text" id="{{ key }}" name="{{ key }}" value="{{ value }}"><br><br>
+                    <input type="text" id="{{ key }}" name="{{ key }}" value="{{ request.form[key] if request.form.get(key) else value }}"><br><br>
                 {% endif %}
             {% endfor %}
         {% endif %}
@@ -48,6 +56,31 @@
         {% if response %}
             <h3>Response:</h3>
             <pre>{{ response }}</pre>
+        {% endif %}
+    </div>
+    <div id="database-content">
+        <h3>Database Content:</h3>
+        {% if database_data %}
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Bot Name</th>
+                        <th>In Group</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in database_data %}
+                        <tr>
+                            <td>{{ row[0] }}</td>
+                            <td>{{ row[1] }}</td>
+                            <td>{{ row[2] }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No data available.</p>
         {% endif %}
     </div>
 </body>

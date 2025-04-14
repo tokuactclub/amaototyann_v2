@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # database.py をバックグラウンドで起動
-python3 -m amaototyann.src.database &
+python3 -m amaototyann.src.database  &
 DB_PID=$!
 echo "Started database.py with PID: $DB_PID"
 
@@ -11,7 +11,7 @@ GUNICORN_PID=$!
 echo "Started gunicorn with PID: $GUNICORN_PID"
 
 
-python3 amaototyann/debug/debugger.py
+python3 -m amaototyann.debug.debugger
 
 
 echo "Stopping processes..."
