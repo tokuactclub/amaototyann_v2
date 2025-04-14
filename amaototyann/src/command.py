@@ -1,22 +1,17 @@
 from linebot import LineBotApi # type: ignore
 from linebot.models import TextSendMessage # type: ignore
 import requests # type: ignore
-from pprint import pprint
 from datetime import datetime, timezone, timedelta
 import os
 import json
-# ローカル実行の場合は相対パスでimportする
-try:
-    from src import messages
-    from src.bubble_msg import taskBubbleMsg
-except:
-    import messages
-    from bubble_msg import taskBubbleMsg
+
+from amaototyann.src.bubble_msg import taskBubbleMsg
+from amaototyann.src import messages
 GAS_URL = os.getenv('GAS_URL')
 
 # loggerの設定
 from logging import getLogger, config
-with open("src/log_config.json", "r") as f:
+with open("amaototyann/src/log_config.json", "r") as f:
     config.dictConfig(json.load(f))
 logger = getLogger("logger")
 

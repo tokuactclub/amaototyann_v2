@@ -1,17 +1,17 @@
 #!/bin/bash
 
 # database.py をバックグラウンドで起動
-python3 src/database.py &
+python3 -m amaototyann.src.database &
 DB_PID=$!
 echo "Started database.py with PID: $DB_PID"
 
 # gunicorn をバックグラウンドで起動
-gunicorn src.server:app -w 1 &
+gunicorn amaototyann.src.server:app -w 1 &
 GUNICORN_PID=$!
 echo "Started gunicorn with PID: $GUNICORN_PID"
 
 
-python3 src/debug/debugger.py
+python3 amaototyann/debug/debugger.py
 
 
 echo "Stopping processes..."

@@ -2,24 +2,8 @@ import requests # type: ignore
 import os
 from pprint import pprint
 import json
-# loggerの設定
-from logging import getLogger, config
-with open("src/log_config.json", "r") as f:
-    config.dictConfig(json.load(f))
-logger = getLogger("logger")
+from amaototyann.src import logger
 
-def load_dotenv():
-    """.envファイルを読み込む関数
-    """
-    is_render_server = os.getenv("IS_RENDER_SERVER")
-    if not is_render_server or is_render_server == "False":
-        from dotenv import load_dotenv as ld # type: ignore
-        ld(override=True)
-
-def init_logger():
-    global logger
-    return logger
-    
 
 
 class BotInfo():
@@ -122,9 +106,7 @@ def transcribeWebhook(request, url, body=None):
 
 
 if __name__ == "__main__":
-    load_dotenv()       
-
-
+   
     # BotInfoのテスト
     bot_info = BotInfo()
     

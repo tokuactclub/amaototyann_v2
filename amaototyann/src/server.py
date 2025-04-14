@@ -7,16 +7,10 @@ import threading
 from linebot import LineBotApi # type: ignore
 from linebot.models import TextSendMessage # type: ignore
 
+from amaototyann.src.command import Commands, CommandsScripts
+from amaototyann.src.system import BotInfo, transcribeWebhook
+from amaototyann.src import messages, logger
 
-from src.command import Commands, CommandsScripts
-from src.system import BotInfo, transcribeWebhook, load_dotenv, init_logger
-from src import messages
-
-# ローカル開発の場合.envファイルから環境変数を読み込む
-load_dotenv()
-
-# loggerの設定
-logger = init_logger()
 
 GAS_URL = os.getenv('GAS_URL')
 

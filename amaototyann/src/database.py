@@ -2,9 +2,7 @@ from flask import Flask, request, jsonify # type: ignore
 import pandas as pd # type: ignore
 import os
 import requests # type: ignore
-from system import init_logger
-
-logger = init_logger()
+from amaototyann.src import logger
 
 app = Flask(__name__)
 app.strict_slashes = False
