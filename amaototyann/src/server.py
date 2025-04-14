@@ -98,10 +98,7 @@ def react_message_webhook(request, botId, event_index):
     if message.startswith("引き継ぎ資料") or message.startswith("引継ぎ資料"):
         message = CommandsScripts.HANDOVER
 
-    debug = False
-    if request_json.get("debug") == True:
-        # デバッグモードの場合はコマンドを実行せずにログを出力
-        debug = True
+    debug = request_json.get("debug", False) 
         
     # チャットボット機能の際は転送
     if message.startswith("あまおとちゃん") and not debug:
@@ -132,23 +129,29 @@ def react_join_webhook(request, botId, event_index):
     bot_info = BOT_INFOS.get(botId)
     channel_access_token = bot_info["channel_access_token"]
     bot_name = bot_info["bot_name"]
-    
-    # グループの人数を取得
-    line_bot_api = LineBotApi(channel_access_token)
-    event = request_json['events'][event_index]
-    group_id = event['source']['groupId']
-    group_member_count = line_bot_api.get_group_members_count(group_id)
-    
-    # 残り送信可能なメッセージ数を取得
-    remaining_message_count = line_bot_api.get_message_quota().value
 
-    # 残り送信可能な回数を計算(小数点以下切り捨て)
-    remaining_message_count = remaining_message_count // group_member_count
+    debug = request_json.get("debug", False) 
+
+    if debug:
+        remaining_message_count = 200
+        logger.info(messages.JOIN.format(bot_name, remaining_message_count))
+    else:
+        # グループの人数を取得
+        line_bot_api = LineBotApi(channel_access_token)
+        event = request_json['events'][event_index]
+        group_id = event['source']['groupId']
+        group_member_count = line_bot_api.get_group_members_count(group_id)
+        
+        # 残り送信可能なメッセージ数を取得
+        remaining_message_count = line_bot_api.get_message_quota().value
+
+        # 残り送信可能な回数を計算(小数点以下切り捨て)
+        remaining_message_count = remaining_message_count // group_member_count
     
-    line_bot_api.reply_message(
-        event['replyToken'],
-        TextSendMessage(text= messages.JOIN.format(bot_name, remaining_message_count))
-    )
+        line_bot_api.reply_message(
+            event['replyToken'],
+            TextSendMessage(text= messages.JOIN.format(bot_name, remaining_message_count))
+        )
 
     # 参加したグループがリマインド対象のグループであればdatabaseを更新
     # リマインド対象のグループIDを取得 

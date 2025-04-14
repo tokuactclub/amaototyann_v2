@@ -3,6 +3,7 @@ import requests
 import json
 import os
 from amaototyann.src.system import BotInfo
+from amaototyann.src import logger
 
 app = Flask(__name__)
 
