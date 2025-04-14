@@ -123,11 +123,18 @@ class Commands(object):
                 json={"cmd":"practice"},
                 )
             events = response.json()
-            events = map(
-                lambda x: messages.PRACTICE.format(x["place"], x["start"].split()[3][:-3], x["end"].split()[3][:-3], "\n" + x["memo"] if x["memo"] else ""),
-                events
-                )
-            events = list(events)
+            try:
+                events = list(map(
+                    lambda x: messages.PRACTICE.format(x["place"], x["start"].split()[3][:-3], x["end"].split()[3][:-3], "\n" + x["memo"] if x["memo"] else ""),
+                    events
+                    ))
+
+            # GASのタイム表記の移行に伴う例外処理
+            except Exception as e:
+                events = list(map(
+                    lambda x: messages.PRACTICE.format(x["place"], x["start"], x["end"], "\n" + x["memo"] if x["memo"] else ""),
+                    events
+                    ))
             logger.info(events)
             if len(events)>0:
                 self._send_text_message("\n\n".join(events))
