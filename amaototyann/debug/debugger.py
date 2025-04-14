@@ -2,8 +2,7 @@ from flask import Flask, render_template_string, request, jsonify
 import requests
 import json
 import os
-from amaototyann.src.system import BotInfo
-from amaototyann.src import logger
+from amaototyann.src import logger, db_bot
 
 app = Flask(__name__)
 
@@ -27,8 +26,8 @@ def index():
 
     # データベース接続とデータ取得
     try:
-        bot_info = BotInfo()
-        database_data = bot_info.get_all()
+        bot_info = db_bot
+        database_data = bot_info.list_rows()
         database_data = list(map(lambda x: [x["id"], x["bot_name"], x["in_group"]], database_data))
     except Exception as e:
         response = {"error": f"Failed to fetch database data or update group_id: {str(e)}"}
@@ -72,7 +71,7 @@ def index():
             }
 
             # 最新のデータベースデータを取得
-            database_data = bot_info.get_all()
+            database_data = bot_info.list_rows()
             database_data = list(map(lambda x: [x["id"], x["bot_name"], x["in_group"]], database_data))
         except Exception as e:
             response = {"error": str(e)}

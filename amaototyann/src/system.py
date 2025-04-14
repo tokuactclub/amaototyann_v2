@@ -6,61 +6,6 @@ from amaototyann.src import logger
 
 
 
-class BotInfo():
-    def __init__(self):
-        self.database_url = os.getenv("DATABASE_URL")
-        logger.info(f"BotInfo initialized to database. url: {self.database_url}")
-        
-
-    def get(self, id):
-        url = os.path.join(self.database_url, "get", str(id) + "/")
-        response = requests.get(url)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"Failed to get data for ID {id} at URL {url}: {response.status_code} - {response.text}")
-            return None
-    
-    def update(self, id, column, value):
-        self.is_updated = True
-        url = os.path.join(self.database_url, "update_value", str(id), column+"/")
-        response = requests.get(url, params={"value": value})
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"Failed to update data for ID {id} at URL {url}: {response.status_code} - {response.text}")
-            return None
-        
-    def get_all(self):
-        url = os.path.join(self.database_url, "list/")
-        response = requests.get(url)
-        print(f"get_all response: {response}")
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"Failed to get all data at URL {url}: {response.status_code} - {response.text}")
-            return None
-    
-    @property
-    def is_updated(self):
-        url = os.path.join(self.database_url, "is_updated/") 
-        response = requests.get(url)
-        if response.status_code == 200:
-            return response.json()['is_updated']
-        else:
-            logger.error(f"Failed to check update status at URL {url}: {response.status_code} - {response.text}")
-            return None
-        
-    @is_updated.setter
-    def is_updated(self, value):
-        url = os.path.join(self.database_url, "is_updated/") 
-        response = requests.get(url, params={"value": value})
-        if response.status_code == 200:
-            return response.json()['is_updated']
-        else:
-            logger.error(f"Failed to check update status at URL {url}: {response.status_code} - {response.text}")
-            return None
-        
 # webhookを転送する関数
 def transcribeWebhook(request, url, body=None):
     """webhookを転送する関数

@@ -8,15 +8,16 @@ from linebot import LineBotApi # type: ignore
 from linebot.models import TextSendMessage # type: ignore
 
 from amaototyann.src.command import Commands, CommandsScripts
-from amaototyann.src.system import BotInfo, transcribeWebhook
+from amaototyann.src.system import transcribeWebhook
 from amaototyann.src import messages, logger
+from amaototyann.src import db_bot
 
 
 GAS_URL = os.getenv('GAS_URL')
 
 
 # gasから取得する
-BOT_INFOS = BotInfo()
+BOT_INFOS = db_bot
 
 
 # サーバー停止を阻止し常時起動させるスクリプト
@@ -51,11 +52,10 @@ app.strict_slashes = False
 # databaseをスプレッドシートにバックアップするためのスクリプト
 @app.route('/backupDatabase/', methods=['GET'])
 def backup_database():
-    global BOT_INFOS
     if BOT_INFOS.is_updated == False:
         return "not need to backup", 200
     # 現在のdbを取得
-    db = BOT_INFOS.get_all()
+    db = BOT_INFOS.list_rows()
     if db is None:
         logger.error("database is None")
         return "error", 500
@@ -88,7 +88,7 @@ def react_message_webhook(request, botId, event_index):
     logger.info("got react message webhook")
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
-    bot_info = BOT_INFOS.get(botId)
+    bot_info = BOT_INFOS.get_row(botId)
     channel_access_token = bot_info["channel_access_token"]
     gpt_url = bot_info["gpt_webhook_url"]
     
@@ -126,7 +126,7 @@ def react_join_webhook(request, botId, event_index):
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
 
-    bot_info = BOT_INFOS.get(botId)
+    bot_info = BOT_INFOS.get_row(botId)
     channel_access_token = bot_info["channel_access_token"]
     bot_name = bot_info["bot_name"]
 
@@ -168,7 +168,7 @@ def react_join_webhook(request, botId, event_index):
     # リマインド対象のグループIDと一致する場合
     if group_id == TARGET_GROUP_ID:
         # リマインド対象のグループに参加したことを記録
-        BOT_INFOS.update(botId, "in_group", True)
+        BOT_INFOS.update_value(botId, "in_group", True)
     return
 
 
@@ -188,7 +188,7 @@ def lineWebhook(botId):
         elif event['type'] == 'leave': # グループ退出イベント
             logger.info("got left webhook")    
             # グループから抜けたことを記録
-            BOT_INFOS.update(botId, "in_group", False)
+            BOT_INFOS.update_value(botId, "in_group", False)
           
         else:
             logger.info("not valid webhook type") 
@@ -198,7 +198,7 @@ def lineWebhook(botId):
 # プッシュメッセージ送信用のエンドポイント
 @app.route('/pushMessage/', methods=['POST'])
 def pushMessage():
-    use_account = [account for account in BOT_INFOS.get_all() if account["in_group"] == True]
+    use_account = [account for account in BOT_INFOS.list_rows() if account["in_group"] == True]
     if len(use_account) == 0:
         return "error", 400
     use_account = use_account[0]
@@ -220,7 +220,7 @@ def pushMessage():
 # 動作テスト用エンドポイント
 @app.route("/test")
 def test():
-    use_account = [account for account in BOT_INFOS.get_all() if account["in_group"] == True]
+    use_account = [account for account in BOT_INFOS.list_rows() if account["in_group"] == True]
     if len(use_account) == 0:
         return "error", 400
     use_account = use_account[0]
