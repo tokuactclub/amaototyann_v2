@@ -1,0 +1,71 @@
+2025-04-14 11:12:20,256 logger:28 __init__ [INFO]: BotInfo initialized to database. url: None
+2025-04-14 11:12:20,256 logger:39 boot_server [ERROR]: expected str, bytes or os.PathLike object, not NoneType
+2025-04-14 11:13:18,398 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 11:13:18,405 logger:67 is_updated [ERROR]: Failed to check update status at URL http://127.0.0.1:5000/is_updated/: 403 - 
+2025-04-14 11:13:18,407 logger:57 get_all [ERROR]: Failed to get all data at URL http://127.0.0.1:5000/list/: 403 - 
+2025-04-14 11:13:18,408 logger:66 backup_database [ERROR]: database is None
+2025-04-14 11:14:02,576 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 11:14:02,583 logger:67 is_updated [ERROR]: Failed to check update status at URL http://127.0.0.1:5000/is_updated/: 403 - 
+2025-04-14 11:14:02,585 logger:57 get_all [ERROR]: Failed to get all data at URL http://127.0.0.1:5000/list/: 403 - 
+2025-04-14 11:14:02,586 logger:66 backup_database [ERROR]: database is None
+2025-04-14 11:17:02,601 logger:67 is_updated [ERROR]: Failed to check update status at URL http://127.0.0.1:5000/is_updated/: 403 - 
+2025-04-14 11:17:02,605 logger:57 get_all [ERROR]: Failed to get all data at URL http://127.0.0.1:5000/list/: 403 - 
+2025-04-14 11:17:02,606 logger:66 backup_database [ERROR]: database is None
+2025-04-14 11:22:37,743 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 11:22:37,750 logger:67 is_updated [ERROR]: Failed to check update status at URL http://127.0.0.1:5000/is_updated/: 403 - 
+2025-04-14 11:22:37,752 logger:57 get_all [ERROR]: Failed to get all data at URL http://127.0.0.1:5000/list/: 403 - 
+2025-04-14 11:22:37,753 logger:66 backup_database [ERROR]: database is None
+2025-04-14 11:24:31,415 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 11:24:31,450 logger:41 log_request_info [INFO]: Method: GET, Path: /favicon.ico
+2025-04-14 11:25:44,167 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 11:25:44,175 logger:67 is_updated [ERROR]: Failed to check update status at URL http://127.0.0.1:5000/is_updated/: 403 - 
+2025-04-14 11:25:44,176 logger:57 get_all [ERROR]: Failed to get all data at URL http://127.0.0.1:5000/list/: 403 - 
+2025-04-14 11:25:44,177 logger:66 backup_database [ERROR]: database is None
+2025-04-14 11:26:52,591 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 11:26:52,598 logger:67 is_updated [ERROR]: Failed to check update status at URL http://127.0.0.1:5000/is_updated/: 403 - 
+2025-04-14 11:26:52,600 logger:57 get_all [ERROR]: Failed to get all data at URL http://127.0.0.1:5000/list/: 403 - 
+2025-04-14 11:26:52,601 logger:66 backup_database [ERROR]: database is None
+2025-04-14 11:27:40,868 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 11:27:40,874 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 11:28:37,823 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 11:29:06,270 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 11:29:06,277 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 11:30:10,795 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 11:30:10,802 logger:67 is_updated [ERROR]: Failed to check update status at URL http://127.0.0.1:5000/is_updated/: 403 - 
+2025-04-14 11:30:10,804 logger:57 get_all [ERROR]: Failed to get all data at URL http://127.0.0.1:5000/list/: 403 - 
+2025-04-14 11:30:10,805 logger:66 backup_database [ERROR]: database is None
+2025-04-14 11:30:16,977 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 11:30:18,001 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 11:30:47,017 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 11:30:47,024 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 11:33:47,040 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 11:37:14,780 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 11:56:10,253 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 11:59:10,264 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 12:02:10,275 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 12:05:10,288 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 12:08:10,304 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 12:11:12,719 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 12:14:12,734 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 12:17:12,749 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 12:20:12,763 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 12:23:12,779 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 12:23:35,830 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 12:24:15,667 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 12:25:17,662 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 12:26:55,942 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 12:26:55,948 logger:41 log_request_info [INFO]: Method: GET, Path: /is_updated/
+2025-04-14 12:27:35,909 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 12:28:11,036 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 12:30:26,527 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 12:30:26,534 logger:67 is_updated [ERROR]: Failed to check update status at URL http://127.0.0.1:5000/is_updated/: 403 - 
+2025-04-14 12:30:26,539 logger:57 get_all [ERROR]: Failed to get all data at URL http://127.0.0.1:5000/list/: 403 - 
+2025-04-14 12:30:26,539 logger:66 backup_database [ERROR]: database is None
+2025-04-14 12:30:39,305 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 12:30:39,312 logger:67 is_updated [ERROR]: Failed to check update status at URL http://127.0.0.1:5000/is_updated/: 403 - 
+2025-04-14 12:30:39,314 logger:57 get_all [ERROR]: Failed to get all data at URL http://127.0.0.1:5000/list/: 403 - 
+2025-04-14 12:30:39,315 logger:66 backup_database [ERROR]: database is None
+2025-04-14 12:31:59,752 logger:28 __init__ [INFO]: BotInfo initialized to database. url: http://127.0.0.1:5000/
+2025-04-14 12:31:59,759 logger:67 is_updated [ERROR]: Failed to check update status at URL http://127.0.0.1:5000/is_updated/: 403 - 
+2025-04-14 12:31:59,762 logger:57 get_all [ERROR]: Failed to get all data at URL http://127.0.0.1:5000/list/: 403 - 
+2025-04-14 12:31:59,763 logger:66 backup_database [ERROR]: database is None

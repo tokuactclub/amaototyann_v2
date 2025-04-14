@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook Sender</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        form, #response {
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Webhook Sender</h1>
+    <form method="POST" action="/send-webhook">
+        <label for="url">Server URL:</label><br>
+        <input type="text" id="url" name="url" placeholder="Enter server URL" required><br><br>
+        <button type="submit">Send Webhook</button>
+    </form>
+    <br>
+    <div id="response">
+        {% if response %}
+            <h3>Response:</h3>
+            <pre>{{ response }}</pre>
+        {% endif %}
+    </div>
+</body>
+</html>

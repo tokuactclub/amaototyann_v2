@@ -103,9 +103,14 @@ def react_message_webhook(request, botId, event_index):
     # 引継ぎ資料がメッセージに含まれる場合コマンドに変換
     if message.startswith("引き継ぎ資料") or message.startswith("引継ぎ資料"):
         message = CommandsScripts.HANDOVER
+
+    debug = False
+    if request_json.get("debug") == True:
+        # デバッグモードの場合はコマンドを実行せずにログを出力
+        debug = True
         
     # チャットボット機能の際は転送
-    if message.startswith("あまおとちゃん"):
+    if message.startswith("あまおとちゃん") and not debug:
         for _ in range(3):
             response = transcribeWebhook(request,gpt_url)
             if response[1] == 200:
@@ -120,7 +125,8 @@ def react_message_webhook(request, botId, event_index):
         return "finish", 200
     logger.info("start command process")
     # コマンド処理
-    Commands(channel_access_token, request= request, botId=botId).process(message)
+
+    Commands(channel_access_token, request= request, botId=botId, debug= debug).process(message)
 
     return
 
