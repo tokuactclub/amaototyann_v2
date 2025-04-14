@@ -122,7 +122,9 @@ class Commands(object):
                 GAS_URL,
                 json={"cmd":"practice"},
                 )
+            logger.info(f"response: {response}")
             events = response.json()
+            logger.info(f"events: {events}")
             try:
                 events = list(map(
                     lambda x: messages.PRACTICE.format(x["place"], x["start"].split()[3][:-3], x["end"].split()[3][:-3], "\n" + x["memo"] if x["memo"] else ""),
