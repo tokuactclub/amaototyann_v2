@@ -19,8 +19,8 @@ with open(html_template_path, "r") as f:
 @app.route("/", methods=["GET", "POST"])
 def index():
     response = None
+    bot_id = request.form.get("botId") if request.method == "POST" and "botId" in request.form else None  # botIdを取得
     selected_template = request.form.get("template") if request.method == "POST" else None
-    bot_id = request.form.get("botId") if request.method == "POST" else None  # botIdを取得
     webhook_template = {}
     editable_fields = {}
     database_data = []  # データベースから取得したデータを格納
@@ -70,6 +70,10 @@ def index():
                 "status_code": res.status_code,
                 "response_body": res.json() if res.headers.get("Content-Type") == "application/json" else res.text
             }
+
+            # 最新のデータベースデータを取得
+            database_data = bot_info.get_all()
+            database_data = list(map(lambda x: [x["id"], x["bot_name"], x["in_group"]], database_data))
         except Exception as e:
             response = {"error": str(e)}
 
@@ -79,7 +83,8 @@ def index():
         templates=template_files,
         editable_fields=editable_fields,
         database_data=database_data,  # データベースデータをテンプレートに渡す
-        bot_ids=[{"id": bot[0], "name": bot[1]} for bot in database_data]  # bot_idリストを渡す
+        bot_ids=[{"id": bot[0], "name": bot[1]} for bot in database_data],  # bot_idリストを渡す
+        request_form=request.form  # request.formをテンプレートに渡す
     )
 
 if __name__ == "__main__":
