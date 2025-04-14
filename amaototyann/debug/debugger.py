@@ -30,20 +30,6 @@ def index():
         bot_info = BotInfo()
         database_data = bot_info.get_all()
         database_data = list(map(lambda x: [x["id"], x["bot_name"], x["in_group"]], database_data))
-        
-        # group_idを取得してjoin.jsonの値を更新
-        group_info = requests.post(
-            os.getenv("GAS_URL"),
-            json={"cmd": "getGroupInfo"}
-        ).json()
-        group_id = group_info["id"]
-
-        # join.jsonを読み込んで値を更新
-        join_json_path = "amaototyann/debug/webhook_templates/join.json"
-        with open(join_json_path, "r") as f:
-            join_data = json.load(f)
-        join_data["group_id"] = group_id
-        logger.info(f"Updated group_id in memory: {join_data['group_id']}")
     except Exception as e:
         response = {"error": f"Failed to fetch database data or update group_id: {str(e)}"}
 
@@ -58,6 +44,14 @@ def index():
             # If the selected template is message.json, prepare editable fields
             if selected_template == "message.json":
                 editable_fields = {"message.text": webhook_template["events"][0]["message"]["text"]}
+            elif selected_template == "join.json":
+                 # group_idを取得してjoin.jsonの値を更新
+                group_info = requests.post(
+                    os.getenv("GAS_URL"),
+                    json={"cmd": "getGroupInfo"}
+                ).json()
+                group_id = group_info["id"]
+                webhook_template["events"][0]["source"]["groupId"] = group_id
         except Exception as e:
             response = {"error": f"Failed to load template: {str(e)}"}
 
@@ -84,7 +78,8 @@ def index():
         response=response,
         templates=template_files,
         editable_fields=editable_fields,
-        database_data=database_data  # データベースデータをテンプレートに渡す
+        database_data=database_data,  # データベースデータをテンプレートに渡す
+        bot_ids=[{"id": bot[0], "name": bot[1]} for bot in database_data]  # bot_idリストを渡す
     )
 
 if __name__ == "__main__":

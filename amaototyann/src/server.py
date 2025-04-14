@@ -134,6 +134,8 @@ def react_join_webhook(request, botId, event_index):
 
     if debug:
         remaining_message_count = 200
+        event = request_json['events'][event_index]
+        group_id = event['source']['groupId']
         logger.info(messages.JOIN.format(bot_name, remaining_message_count))
     else:
         # グループの人数を取得
@@ -161,6 +163,7 @@ def react_join_webhook(request, botId, event_index):
                 ).json()
             
     TARGET_GROUP_ID = group_info["id"]
+    logger.info(f"target group id: {TARGET_GROUP_ID}\n, group id: {group_id}")
 
     # リマインド対象のグループIDと一致する場合
     if group_id == TARGET_GROUP_ID:

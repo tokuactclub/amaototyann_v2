@@ -37,7 +37,11 @@
         </select><br><br>
 
         <label for="botId">Bot ID:</label><br>
-        <input type="number" id="botId" name="botId" value="{{ request.form.botId or 1 }}" required><br><br>
+        <select id="botId" name="botId" required>
+            {% for bot in bot_ids %}
+                <option value="{{ bot.id }}" {% if bot.id == request.form.botId|int %}selected{% endif %}>{{ bot.name }}</option>
+            {% endfor %}
+        </select><br><br>
 
         {% if editable_fields %}
             <h3>Edit Template Fields:</h3>
