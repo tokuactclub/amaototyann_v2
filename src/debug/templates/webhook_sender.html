@@ -23,9 +23,24 @@
 </head>
 <body>
     <h1>Webhook Sender</h1>
-    <form method="POST" action="/send-webhook">
-        <label for="url">Server URL:</label><br>
-        <input type="text" id="url" name="url" placeholder="Enter server URL" required><br><br>
+    <form method="POST" action="/">
+        <label for="template">Select Template:</label><br>
+        <select id="template" name="template" required onchange="this.form.submit()">
+            {% for template in templates %}
+                <option value="{{ template }}" {% if template == request.form.template %}selected{% endif %}>{{ template }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        {% if editable_fields %}
+            <h3>Edit Template Fields:</h3>
+            {% for key, value in editable_fields.items() %}
+                {% if key == 'message.text' %}
+                    <label for="{{ key }}">{{ key }}:</label><br>
+                    <input type="text" id="{{ key }}" name="{{ key }}" value="{{ value }}"><br><br>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+
         <button type="submit">Send Webhook</button>
     </form>
     <br>
