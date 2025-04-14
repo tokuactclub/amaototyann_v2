@@ -80,7 +80,7 @@ def backup_database():
 @app.route('/')
 def hello_world():
     # app.logを返す
-    with open("logs/app.log", "r") as f:
+    with open("amaototyann/logs/app.log", "r") as f:
         log = f.read()
     return Response(log, mimetype='text/plain')
 
