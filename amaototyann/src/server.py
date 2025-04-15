@@ -1,3 +1,8 @@
+## this section must be loaded before loading flask
+from gevent import monkey
+monkey.patch_all(ssl=False)
+##
+
 from flask import Flask, request, Response # type: ignore
 import os
 import requests # type: ignore
@@ -12,8 +17,6 @@ from amaototyann.src.system import transcribeWebhook
 from amaototyann.src import messages, logger
 from amaototyann.src import db_bot, group_info_manager
 from amaototyann.src import IS_DEBUG_MODE
-from gevent import monkey
-monkey.patch_all(ssl=False)
 
 
 GAS_URL = os.getenv('GAS_URL')
