@@ -92,16 +92,99 @@ class BotInfo:
         logger.info(f"Updating {column} for ID {id} to {value}")
         self.database.loc[self.database['id'] == id, column] = value
 
+    def backup_to_gas(self):
+        """Backup the current database to GAS."""
+        if not self.is_updated:
+            return "not need to backup", 200
+
+        # Convert the database to a list for GAS
+        db = self.list_rows()
+        if db is None:
+            logger.error("database is None")
+            return "error", 500
+
+        db = list(map(lambda x: [x["id"], x["bot_name"], x["channel_access_token"], x["channel_secret"], x["gpt_webhook_url"], x["in_group"]], db))
+
+        # Send the database to GAS
+        response = requests.post(
+            os.getenv('GAS_URL'),
+            json={"cmd": "setBotInfo", "options": {"bot_info": db}}
+        )
+
+        if response.text == "success":
+            logger.info("backup success")
+            self.is_updated = False
+            return "success", 200
+        else:
+            logger.error("backup error")
+            return "error", 500
+
+
+class GroupInfo:
+    def __init__(self):
+        self._group_info:dict = None
+        self.init_group_info_from_gas()
+        self.is_updated = False
+
+    def init_group_info_from_gas(self):
+        """Initialize group info from GAS."""
+        for _ in range(3):
+            try:
+                self._group_info = requests.post(
+                    os.getenv('GAS_URL'),
+                    json={"cmd": "getGroupInfo"}
+                ).json()
+                break
+            except Exception as e:
+                logger.error(f"Failed to initialize group info: {e}")
+    
+    def set_group_info(self, group_id: str, group_name: str):
+        """Set group info."""
+        if not all([group_id, group_name]):
+            raise ValueError('All fields are required')
+        self._group_info = {
+            'id': group_id,
+            'groupName': group_name
+        }
+        self.is_updated = True
+    @property
+    def group_id(self):
+        if self.group_info is None:
+            raise ValueError("Group info not initialized")
+        return self.group_info.get('id')
+    
+    @group_id.setter
+    def group_id(self, value):
+        raise Exception("group_id cannot be set without other group info")
+    
+    def backup_to_gas(self):
+        """Backup group info to GAS."""
+        if not self.is_updated:
+            return "not need to backup", 200
+
+        # Send the group info to GAS
+        response = requests.post(
+            os.getenv('GAS_URL'),
+            json={
+                "cmd": "setGroupInfo", 
+                "options": {
+                    "id": self._group_info['id'],
+                    "groupName": self._group_info['groupName'],
+                    }
+                }
+        )
+
+        if response.text == "success":
+            logger.info("Group info backup success")
+            self.is_updated = False
+            return "success", 200
+        else:
+            logger.error("Group info backup error")
+            return "error", 500
+
 
 # Initialize the database manager
 db_bot = BotInfo()
 
-# Initialize group info from GAS
-try:
-    group_info = requests.post(
-        os.getenv('GAS_URL'),
-        json={"cmd": "getGroupInfo"}
-    ).json()
-except Exception as e:
-    logger.error(f"Failed to initialize group info: {e}")
-    group_info = None
+# Initialize group info
+group_info_manager = GroupInfo()

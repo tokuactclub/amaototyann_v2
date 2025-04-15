@@ -2,7 +2,7 @@ from flask import Flask, render_template_string, request
 import requests
 import json
 import os
-from amaototyann.src import logger, db_bot, group_info
+from amaototyann.src import logger, db_bot, group_info_manager
 
 app = Flask(__name__)
 
@@ -56,7 +56,7 @@ def index():
 
         elif selected_template == "join.json":
             # group_idを取得してjoin.jsonの値を更新
-            group_id = group_info["id"]
+            group_id = group_info_manager.group_id
             webhook_template["events"][0]["source"]["groupId"] = group_id
         try:
             # botIdが指定されていない場合はデフォルト値を使用

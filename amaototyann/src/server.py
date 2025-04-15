@@ -10,7 +10,7 @@ from linebot.models import TextSendMessage # type: ignore
 from amaototyann.src.command import Commands, CommandsScripts
 from amaototyann.src.system import transcribeWebhook
 from amaototyann.src import messages, logger
-from amaototyann.src import db_bot, group_info
+from amaototyann.src import db_bot, group_info_manager
 
 
 GAS_URL = os.getenv('GAS_URL')
@@ -52,31 +52,10 @@ app.strict_slashes = False
 # databaseをスプレッドシートにバックアップするためのスクリプト
 @app.route('/backupDatabase/', methods=['GET'])
 def backup_database():
-    if BOT_INFOS.is_updated == False:
-        return "not need to backup", 200
-    # 現在のdbを取得
-    db = BOT_INFOS.list_rows()
-    if db is None:
-        logger.error("database is None")
-        return "error", 500
-    print("--" * 30, db)
-    # スプレッドシート用に変換
-    db = list(map(lambda x: [x["id"], x["bot_name"], x["channel_access_token"], x["channel_secret"], x["gpt_webhook_url"], x["in_group"]], db))
-
-    # スプレッドシートに書き込み
-    response = requests.post(
-        GAS_URL,
-        json={"cmd":"setBotInfo", "options": {"bot_info": db}}
-    )
-    
-    if response.text == "success":
-        logger.info("backup success")
-        BOT_INFOS.is_updated = False
-        return "success"
-    else:
-        logger.error("backup error")
-        return "error"
-
+    res, code = group_info_manager.backup_to_gas()
+    res2, code2 = db_bot.backup_to_gas()
+    return ("success", 200) if code == 200 and code2 == 200 else ("error", 500)
+  
 @app.route('/')
 def hello_world():
     # app.logを返す
@@ -157,7 +136,7 @@ def react_join_webhook(request, botId, event_index):
 
     # 参加したグループがリマインド対象のグループであればdatabaseを更新
     # リマインド対象のグループIDを取得 
-    TARGET_GROUP_ID = group_info["id"]
+    TARGET_GROUP_ID = group_info_manager.group_id
     logger.info(f"target group id: {TARGET_GROUP_ID}\n, group id: {group_id}")
 
     # リマインド対象のグループIDと一致する場合
