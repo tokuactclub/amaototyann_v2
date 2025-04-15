@@ -12,10 +12,11 @@ with open("amaototyann/src/log_config.json", "r") as f:
 logger = getLogger("logger")
 
 
-is_render_server = os.getenv("IS_RENDER_SERVER")
-if not is_render_server or is_render_server == "False":
+IS_DEBUG_MODE =  not os.getenv("IS_RENDER_SERVER", "false").lower() == "true"
+if IS_DEBUG_MODE:
     from dotenv import load_dotenv
     load_dotenv(override=True)
+
 
 import pandas as pd  # type: ignore
 import os

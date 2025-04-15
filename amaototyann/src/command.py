@@ -8,6 +8,7 @@ import json
 from amaototyann.src.bubble_msg import taskBubbleMsg
 from amaototyann.src import messages
 from amaototyann.src import group_info_manager, db_bot
+from amaototyann.src import IS_DEBUG_MODE
 GAS_URL = os.getenv('GAS_URL')
 
 # loggerの設定
@@ -28,7 +29,7 @@ class CommandsScripts:
     HELLO = "!hello"
     FINISH = "!finish"
 class Commands(object):
-    def __init__(self,channel_access_token, request, botId = None, debug=False):
+    def __init__(self, channel_access_token, request, botId=None):
         """基本的にwebhookのコマンドを処理し、リプライメッセージで応答する。
         ただし一部関数はwebhookを介さずともpushメッセージにより対応する。
 
@@ -36,16 +37,15 @@ class Commands(object):
             channel_access_token (str): linebotのチャンネルアクセストークン
             request (bool, optional): webhookやpostで受け取ったrequestそのもの
             botId (str, optional): botのID. messageからコマンドを実行する際必要
-            debug (bool, optional): デバッグモードかどうか
         """
-        logger.info(f"run Commands in {'debug' if debug else 'normal'} mode")
+        logger.info(f"run Commands in {'debug' if IS_DEBUG_MODE else 'normal'} mode")
 
         body_json = request.get_json()
         self.is_webhook_request = bool(body_json.get("events"))
         if self.is_webhook_request:
             self.webhook_body = body_json
         
-        if self.is_webhook_request: #requestがwebhookの場合
+        if self.is_webhook_request:  # requestがwebhookの場合
             logger.info("webhook request")
             self.botId = int(botId)
             self.reply_token = self.webhook_body['events'][0]['replyToken']
@@ -54,7 +54,6 @@ class Commands(object):
             self.TARGET_GROUP_ID = group_info_manager.group_id
             logger.info(f"target group id: {self.TARGET_GROUP_ID}\nchannel_access_token: {channel_access_token}")
 
-        self.debug = debug
         self.line_bot_api = LineBotApi(channel_access_token)
         
     def process(self, cmd):
@@ -197,7 +196,7 @@ class Commands(object):
         logger.info(f"change group: {group_id}")
 
         # group_id から lineのapiでgroup_name を取得
-        if not self.debug:
+        if not IS_DEBUG_MODE:
             group_name = self.line_bot_api.get_group_summary(group_id).group_name
         else:
             group_name = "test_group_name"
@@ -213,7 +212,7 @@ class Commands(object):
         self._send_text_message(messages.CHANGE_GROUP)
 
     def _send_text_message(self, text):
-        if self.debug:
+        if IS_DEBUG_MODE:
             logger.info(f"[DEBUG MODE] Message: {text}")
         elif self.is_webhook_request:
             self.line_bot_api.reply_message(
@@ -224,7 +223,7 @@ class Commands(object):
                 self.TARGET_GROUP_ID, TextSendMessage(text=text)
             )
     def _send_bubble_message(self, bubble):
-        if self.debug:
+        if IS_DEBUG_MODE:
             logger.info(f"[DEBUG MODE] Bubble Message: {bubble}")
         elif self.is_webhook_request:
             self.line_bot_api.reply_message(

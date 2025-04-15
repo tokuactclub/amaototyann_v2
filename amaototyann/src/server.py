@@ -11,6 +11,7 @@ from amaototyann.src.command import Commands, CommandsScripts
 from amaototyann.src.system import transcribeWebhook
 from amaototyann.src import messages, logger
 from amaototyann.src import db_bot, group_info_manager
+from amaototyann.src import IS_DEBUG_MODE
 
 
 GAS_URL = os.getenv('GAS_URL')
@@ -71,22 +72,20 @@ def react_message_webhook(request, botId, event_index):
     channel_access_token = bot_info["channel_access_token"]
     gpt_url = bot_info["gpt_webhook_url"]
     
-    message:str = request_json['events'][event_index]['message']['text']
+    message: str = request_json['events'][event_index]['message']['text']
 
     # 引継ぎ資料がメッセージに含まれる場合コマンドに変換
     if message.startswith("引き継ぎ資料") or message.startswith("引継ぎ資料"):
         message = CommandsScripts.HANDOVER
 
-    debug = request_json.get("debug", False) 
-        
     # チャットボット機能の際は転送
-    if message.startswith("あまおとちゃん") and not debug:
+    if message.startswith("あまおとちゃん") and not IS_DEBUG_MODE:
         for _ in range(3):
-            response = transcribeWebhook(request,gpt_url)
+            response = transcribeWebhook(request, gpt_url)
             if response[1] == 200:
                 return "finish", 200
             time.sleep(0.5)
-        return "error", 200 # エラーだが、ここはLINEのサーバーに応答する都合上200を返す
+        return "error", 200  # エラーだが、ここはLINEのサーバーに応答する都合上200を返す
     
     # 全角の！を半角に変換
     message = message.replace("！", "!")
@@ -96,7 +95,7 @@ def react_message_webhook(request, botId, event_index):
     logger.info("start command process")
     # コマンド処理
 
-    Commands(channel_access_token, request= request, botId=botId, debug= debug).process(message)
+    Commands(channel_access_token, request=request, botId=botId).process(message)
 
     return
 
@@ -109,9 +108,7 @@ def react_join_webhook(request, botId, event_index):
     channel_access_token = bot_info["channel_access_token"]
     bot_name = bot_info["bot_name"]
 
-    debug = request_json.get("debug", False) 
-
-    if debug:
+    if IS_DEBUG_MODE:
         remaining_message_count = 200
         event = request_json['events'][event_index]
         group_id = event['source']['groupId']
@@ -131,7 +128,7 @@ def react_join_webhook(request, botId, event_index):
     
         line_bot_api.reply_message(
             event['replyToken'],
-            TextSendMessage(text= messages.JOIN.format(bot_name, remaining_message_count))
+            TextSendMessage(text=messages.JOIN.format(bot_name, remaining_message_count))
         )
 
     # 参加したグループがリマインド対象のグループであればdatabaseを更新
