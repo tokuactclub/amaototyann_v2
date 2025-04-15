@@ -91,7 +91,7 @@ class BotInfo:
             value = True if str(value).lower() == 'true' else False
         logger.info(f"Updating {column} for ID {id} to {value}")
         self.database.loc[self.database['id'] == id, column] = value
-        logger.info(self.database)
+
 
 # Initialize the database manager
 db_bot = BotInfo()
