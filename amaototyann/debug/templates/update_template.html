@@ -1,0 +1,27 @@
+<form method="POST" action="/">
+    <label for="template">Select Template:</label><br>
+    <select id="template" name="template" required onchange="updateTemplate()">
+        {% for template in templates %}
+            <option value="{{ template }}" {% if template == request.form.get('template') %}selected{% endif %}>{{ template }}</option>
+        {% endfor %}
+    </select><br><br>
+
+    <label for="botId">Bot ID:</label><br>
+    <select id="botId" name="botId" required>
+        {% for bot in bot_ids %}
+            <option value="{{ bot.id }}" {% if bot.id == (request.form.get('botId')|int if request.form.get('botId') else None) %}selected{% endif %}>{{ bot.name }}</option>
+        {% endfor %}
+    </select><br><br>
+
+    {% if editable_fields %}
+        <h3>Edit Template Fields:</h3>
+        {% for key, value in editable_fields.items() %}
+            {% if key == 'message.text' %}
+                <label for="{{ key }}">{{ key }}:</label><br>
+                <input type="text" id="{{ key }}" name="{{ key }}" value="{{ value }}"><br><br>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    <button type="submit">Send Webhook</button>
+</form>
