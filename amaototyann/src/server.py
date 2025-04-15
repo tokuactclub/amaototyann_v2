@@ -56,7 +56,9 @@ def backup_database():
     res, code = group_info_manager.backup_to_gas()
     res2, code2 = db_bot.backup_to_gas()
     message = f"group info: {res} - {code}\nbot info: {res2} - {code2}"
-    return (message, 200) if code == 200 and code2 == 200 else (message, 500)
+    code = 200 if code == 200 and code2 == 200 else 500
+    logger.info(message, code)
+    return message, code
   
 @app.route('/')
 def hello_world():

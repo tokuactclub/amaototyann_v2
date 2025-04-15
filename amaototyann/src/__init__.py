@@ -119,11 +119,11 @@ class BotInfo:
         )
 
         if response.text == "success":
-            logger.info("backup success")
+            logger.info("bot info backup success")
             self.is_updated = False
             return "success", 200
         else:
-            logger.error("backup error")
+            logger.error("bot info backup error")
             return "error", 500
 
 
