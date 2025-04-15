@@ -30,6 +30,7 @@ def boot_server():
     while True:
         try:
             url = os.path.join(server_url, "backupDatabase/")
+            logger.info(f"===boot server===send backup request: {url}")
             requests.get(url)
         except Exception as e:
             logger.error(e)
