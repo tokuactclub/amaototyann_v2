@@ -1,8 +1,8 @@
-from flask import Flask, render_template_string, request, jsonify
+from flask import Flask, render_template_string, request
 import requests
 import json
 import os
-from amaototyann.src import logger, db_bot
+from amaototyann.src import logger, db_bot, group_info
 
 app = Flask(__name__)
 
@@ -15,6 +15,16 @@ html_template_path = os.path.join(os.path.dirname(__file__), "templates/webhook_
 with open(html_template_path, "r") as f:
     html_template = f.read()
 
+def fetch_database_data():
+    """Fetch the latest database data."""
+    try:
+        bot_info = db_bot
+        database_data = bot_info.list_rows()
+        return list(map(lambda x: [x["id"], x["bot_name"], x["in_group"]], database_data))
+    except Exception as e:
+        logger.error(f"Failed to fetch database data: {str(e)}")
+        return []
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     response = None
@@ -22,15 +32,7 @@ def index():
     selected_template = request.form.get("template") if request.method == "POST" else None
     webhook_template = {}
     editable_fields = {}
-    database_data = []  # データベースから取得したデータを格納
-
-    # データベース接続とデータ取得
-    try:
-        bot_info = db_bot
-        database_data = bot_info.list_rows()
-        database_data = list(map(lambda x: [x["id"], x["bot_name"], x["in_group"]], database_data))
-    except Exception as e:
-        response = {"error": f"Failed to fetch database data or update group_id: {str(e)}"}
+    database_data = fetch_database_data()  # リアルタイムでデータを取得
 
     if selected_template:
         try:
@@ -43,14 +45,7 @@ def index():
             # If the selected template is message.json, prepare editable fields
             if selected_template == "message.json":
                 editable_fields = {"message.text": webhook_template["events"][0]["message"]["text"]}
-            elif selected_template == "join.json":
-                 # group_idを取得してjoin.jsonの値を更新
-                group_info = requests.post(
-                    os.getenv("GAS_URL"),
-                    json={"cmd": "getGroupInfo"}
-                ).json()
-                group_id = group_info["id"]
-                webhook_template["events"][0]["source"]["groupId"] = group_id
+     
         except Exception as e:
             response = {"error": f"Failed to load template: {str(e)}"}
 
@@ -59,6 +54,10 @@ def index():
         if selected_template == "message.json" and "message.text" in request.form:
             webhook_template["events"][0]["message"]["text"] = request.form["message.text"]
 
+        elif selected_template == "join.json":
+            # group_idを取得してjoin.jsonの値を更新
+            group_id = group_info["id"]
+            webhook_template["events"][0]["source"]["groupId"] = group_id
         try:
             # botIdが指定されていない場合はデフォルト値を使用
             bot_id = bot_id or 1
@@ -70,9 +69,6 @@ def index():
                 "response_body": res.json() if res.headers.get("Content-Type") == "application/json" else res.text
             }
 
-            # 最新のデータベースデータを取得
-            database_data = bot_info.list_rows()
-            database_data = list(map(lambda x: [x["id"], x["bot_name"], x["in_group"]], database_data))
         except Exception as e:
             response = {"error": str(e)}
 
@@ -81,7 +77,7 @@ def index():
         response=response,
         templates=template_files,
         editable_fields=editable_fields,
-        database_data=database_data,  # データベースデータをテンプレートに渡す
+        database_data=database_data,  # 最新のデータをテンプレートに渡す
         bot_ids=[{"id": bot[0], "name": bot[1]} for bot in database_data],  # bot_idリストを渡す
         request_form=request.form  # request.formをテンプレートに渡す
     )

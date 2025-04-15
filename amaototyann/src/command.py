@@ -7,6 +7,7 @@ import json
 
 from amaototyann.src.bubble_msg import taskBubbleMsg
 from amaototyann.src import messages
+from amaototyann.src import group_info
 GAS_URL = os.getenv('GAS_URL')
 
 # loggerの設定
@@ -51,11 +52,6 @@ class Commands(object):
             self.reply_token = self.webhook_body['events'][0]['replyToken']
         else:
             logger.info("push message")
-            group_info = requests.post(
-                GAS_URL,
-                json={"cmd":"getGroupInfo"}
-                ).json()
-            
             self.TARGET_GROUP_ID = group_info["id"]
             logger.info(f"target group id: {self.TARGET_GROUP_ID}\nchannel_access_token: {channel_access_token}")
 

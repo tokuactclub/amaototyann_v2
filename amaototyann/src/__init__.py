@@ -71,6 +71,8 @@ class BotInfo:
         return entry.iloc[0].to_dict()
 
     def delete_row(self, id: int):
+        assert isinstance(id, int), 'ID must be an integer'
+
         if id in self.database['id'].values:
             self.database = self.database[self.database['id'] != id].reset_index(drop=True)
         else:
@@ -80,13 +82,26 @@ class BotInfo:
         return self.database.to_dict(orient='records')
 
     def update_value(self, id: int, column: str, value):
+        assert isinstance(id, int), 'ID must be an integer'
         if id not in self.database['id'].values:
             raise ValueError('ID not found')
         if column not in self.database.columns:
             raise ValueError('Column not found')
-        if column == 'in_group':
+        if column == 'in_group'and not isinstance(value, bool):
             value = True if str(value).lower() == 'true' else False
+        logger.info(f"Updating {column} for ID {id} to {value}")
         self.database.loc[self.database['id'] == id, column] = value
+        logger.info(self.database)
 
 # Initialize the database manager
 db_bot = BotInfo()
+
+# Initialize group info from GAS
+try:
+    group_info = requests.post(
+        os.getenv('GAS_URL'),
+        json={"cmd": "getGroupInfo"}
+    ).json()
+except Exception as e:
+    logger.error(f"Failed to initialize group info: {e}")
+    group_info = None

@@ -10,7 +10,7 @@ from linebot.models import TextSendMessage # type: ignore
 from amaototyann.src.command import Commands, CommandsScripts
 from amaototyann.src.system import transcribeWebhook
 from amaototyann.src import messages, logger
-from amaototyann.src import db_bot
+from amaototyann.src import db_bot, group_info
 
 
 GAS_URL = os.getenv('GAS_URL')
@@ -157,11 +157,6 @@ def react_join_webhook(request, botId, event_index):
 
     # 参加したグループがリマインド対象のグループであればdatabaseを更新
     # リマインド対象のグループIDを取得 
-    group_info = requests.post(
-                GAS_URL,
-                json={"cmd":"getGroupInfo"}
-                ).json()
-            
     TARGET_GROUP_ID = group_info["id"]
     logger.info(f"target group id: {TARGET_GROUP_ID}\n, group id: {group_id}")
 
@@ -176,7 +171,7 @@ def react_join_webhook(request, botId, event_index):
 @app.route('/lineWebhook/<botId>/', methods=['POST'])
 def lineWebhook(botId):
     logger.info("got LINE webhook, webhook type is on next line")
-
+    botId = int(botId)
     # ユーザーからのメッセージを取得
     for i,event in enumerate(request.get_json()['events']):
         if event['type'] == 'message': # メッセージイベント
