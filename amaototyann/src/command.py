@@ -7,7 +7,7 @@ import json
 
 from amaototyann.src.bubble_msg import taskBubbleMsg
 from amaototyann.src import messages
-from amaototyann.src import group_info_manager
+from amaototyann.src import group_info_manager, db_bot
 GAS_URL = os.getenv('GAS_URL')
 
 # loggerの設定
@@ -38,13 +38,12 @@ class Commands(object):
             botId (str, optional): botのID. messageからコマンドを実行する際必要
             debug (bool, optional): デバッグモードかどうか
         """
-        if debug:
-            logger.info("debug mode")
-            self.is_webhook_request = False
-        else:
-            logger.info("nomal mode(not debug)")
-            self.webhook_body = request.get_json()
-            self.is_webhook_request = bool(self.webhook_body.get("events"))
+        logger.info(f"run Commands in {'debug' if debug else 'normal'} mode")
+
+        body_json = request.get_json()
+        self.is_webhook_request = bool(body_json.get("events"))
+        if self.is_webhook_request:
+            self.webhook_body = body_json
         
         if self.is_webhook_request: #requestがwebhookの場合
             logger.info("webhook request")
@@ -56,10 +55,7 @@ class Commands(object):
             logger.info(f"target group id: {self.TARGET_GROUP_ID}\nchannel_access_token: {channel_access_token}")
 
         self.debug = debug
-        if debug:
-            self.line_bot_api = None
-        else:
-            self.line_bot_api = LineBotApi(channel_access_token)
+        self.line_bot_api = LineBotApi(channel_access_token)
         
     def process(self, cmd):
         """コマンドを処理する。
@@ -201,28 +197,24 @@ class Commands(object):
         logger.info(f"change group: {group_id}")
 
         # group_id から lineのapiでgroup_name を取得
-        group_name = self.line_bot_api.get_group_summary(group_id).group_name
+        if not self.debug:
+            group_name = self.line_bot_api.get_group_summary(group_id).group_name
+        else:
+            group_name = "test_group_name"
 
-        result = requests.post(
-            GAS_URL,
-            json={
-                "cmd":"changeGroup",
-                "options":{
-                    "id":group_id,
-                    "groupName":group_name,
-                    "botId":self.botId
-                }
-            }
-        ).text
-        if result == "error":
-            self._send_text_message("エラーが発生しました")
-            return
+        # group_infoを更新
+        group_info_manager.set_group_info(group_id, group_name)
+
+        # bot_infoを更新
+        # in_groupカラムを、bot_idのrowだけTrue,それ以外はFalseにする
+        db_bot.database["in_group"] = db_bot.database["id"] == self.botId
+
         
         self._send_text_message(messages.CHANGE_GROUP)
 
     def _send_text_message(self, text):
         if self.debug:
-            logger.info(text)
+            logger.info(f"[DEBUG MODE] Message: {text}")
         elif self.is_webhook_request:
             self.line_bot_api.reply_message(
                 self.reply_token, TextSendMessage(text=text)
@@ -233,7 +225,7 @@ class Commands(object):
             )
     def _send_bubble_message(self, bubble):
         if self.debug:
-            logger.info(bubble)
+            logger.info(f"[DEBUG MODE] Bubble Message: {bubble}")
         elif self.is_webhook_request:
             self.line_bot_api.reply_message(
                 self.reply_token, bubble

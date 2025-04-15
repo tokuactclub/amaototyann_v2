@@ -149,9 +149,9 @@ class GroupInfo:
         self.is_updated = True
     @property
     def group_id(self):
-        if self.group_info is None:
+        if self._group_info is None:
             raise ValueError("Group info not initialized")
-        return self.group_info.get('id')
+        return self._group_info.get('id')
     
     @group_id.setter
     def group_id(self, value):
