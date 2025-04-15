@@ -107,6 +107,9 @@ class BotInfo:
         db = list(map(lambda x: [x["id"], x["bot_name"], x["channel_access_token"], x["channel_secret"], x["gpt_webhook_url"], x["in_group"]], db))
 
         # Send the database to GAS
+        if IS_DEBUG_MODE:
+            return "didn't backup due to debug mode", 200
+        
         response = requests.post(
             os.getenv('GAS_URL'),
             json={"cmd": "setBotInfo", "options": {"bot_info": db}}
@@ -162,6 +165,9 @@ class GroupInfo:
         """Backup group info to GAS."""
         if not self.is_updated:
             return "not need to backup", 200
+        
+        if IS_DEBUG_MODE:
+            return "didn't backup due to debug mode", 200
 
         # Send the group info to GAS
         response = requests.post(
