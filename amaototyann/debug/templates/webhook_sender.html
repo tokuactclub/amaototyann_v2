@@ -25,36 +25,57 @@
             text-align: left; /* 左寄せにする */
         }
     </style>
+    <script>
+        function updateTemplate() {
+            const template = document.getElementById("template").value;
+            const botId = document.getElementById("botId").value; // 現在のbotIdを取得
+            const formData = new FormData();
+            formData.append("template", template);
+            formData.append("botId", botId); // botIdを送信
+
+            fetch("/update_template", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById("form-container").innerHTML = html;
+            })
+            .catch(error => console.error("Error:", error));
+        }
+    </script>
 </head>
 <body>
     <h1>Webhook Sender</h1>
-    <form method="POST" action="/">
-        <label for="template">Select Template:</label><br>
-        <select id="template" name="template" required onchange="this.form.submit()">
-            {% for template in templates %}
-                <option value="{{ template }}" {% if template == request.form.template %}selected{% endif %}>{{ template }}</option>
-            {% endfor %}
-        </select><br><br>
+    <div id="form-container">
+        <form method="POST" action="/">
+            <label for="template">Select Template:</label><br>
+            <select id="template" name="template" required onchange="updateTemplate()">
+                {% for template in templates %}
+                    <option value="{{ template }}" {% if template == request.form.get('template') %}selected{% endif %}>{{ template }}</option>
+                {% endfor %}
+            </select><br><br>
 
-        <label for="botId">Bot ID:</label><br>
-        <select id="botId" name="botId" required>
-            {% for bot in bot_ids %}
-                <option value="{{ bot.id }}" {% if bot.id == request.form.botId|int %}selected{% endif %}>{{ bot.name }}</option>
-            {% endfor %}
-        </select><br><br>
+            <label for="botId">Bot ID:</label><br>
+            <select id="botId" name="botId" required>
+                {% for bot in bot_ids %}
+                    <option value="{{ bot.id }}" {% if bot.id == (request.form.get('botId')|int if request.form.get('botId') else None) %}selected{% endif %}>{{ bot.name }}</option>
+                {% endfor %}
+            </select><br><br>
 
-        {% if editable_fields %}
-            <h3>Edit Template Fields:</h3>
-            {% for key, value in editable_fields.items() %}
-                {% if key == 'message.text' %}
-                    <label for="{{ key }}">{{ key }}:</label><br>
-                    <input type="text" id="{{ key }}" name="{{ key }}" value="{{ request.form[key] if request.form.get(key) else value }}"><br><br>
-                {% endif %}
-            {% endfor %}
-        {% endif %}
+            {% if editable_fields %}
+                <h3>Edit Template Fields:</h3>
+                {% for key, value in editable_fields.items() %}
+                    {% if key == 'message.text' %}
+                        <label for="{{ key }}">{{ key }}:</label><br>
+                        <input type="text" id="{{ key }}" name="{{ key }}" value="{{ request.form[key] if request.form.get(key) else value }}"><br><br>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
 
-        <button type="submit">Send Webhook</button>
-    </form>
+            <button type="submit">Send Webhook</button>
+        </form>
+    </div>
     <br>
     <div id="response">
         {% if response %}

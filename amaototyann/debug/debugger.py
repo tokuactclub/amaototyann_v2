@@ -69,6 +69,9 @@ def index():
                 "response_body": res.json() if res.headers.get("Content-Type") == "application/json" else res.text
             }
 
+            # Database contentを再取得
+            database_data = fetch_database_data()
+
         except Exception as e:
             response = {"error": str(e)}
 
@@ -80,6 +83,63 @@ def index():
         database_data=database_data,  # 最新のデータをテンプレートに渡す
         bot_ids=[{"id": bot[0], "name": bot[1]} for bot in database_data],  # bot_idリストを渡す
         request_form=request.form  # request.formをテンプレートに渡す
+    )
+
+@app.route("/update_template", methods=["POST"])
+def update_template():
+    selected_template = request.form.get("template")
+    webhook_template = {}
+    editable_fields = {}
+    database_data = fetch_database_data()  # bot_ids を再取得
+
+    if selected_template:
+        try:
+            # Load the selected template
+            template_path = os.path.join(templates_dir, selected_template)
+            with open(template_path, "r") as f:
+                webhook_template = json.load(f)
+            webhook_template["debug"] = True
+
+            # If the selected template is message.json, prepare editable fields
+            if selected_template == "message.json":
+                editable_fields = {"message.text": webhook_template["events"][0]["message"]["text"]}
+        except Exception as e:
+            return f"<p>Error loading template: {str(e)}</p>"
+
+    return render_template_string(
+        """
+        <form method="POST" action="/">
+            <label for="template">Select Template:</label><br>
+            <select id="template" name="template" required onchange="updateTemplate()">
+                {% for template in templates %}
+                    <option value="{{ template }}" {% if template == request.form.get('template') %}selected{% endif %}>{{ template }}</option>
+                {% endfor %}
+            </select><br><br>
+
+            <label for="botId">Bot ID:</label><br>
+            <select id="botId" name="botId" required>
+                {% for bot in bot_ids %}
+                    <option value="{{ bot.id }}" {% if bot.id == (request.form.get('botId')|int if request.form.get('botId') else None) %}selected{% endif %}>{{ bot.name }}</option>
+                {% endfor %}
+            </select><br><br>
+
+            {% if editable_fields %}
+                <h3>Edit Template Fields:</h3>
+                {% for key, value in editable_fields.items() %}
+                    {% if key == 'message.text' %}
+                        <label for="{{ key }}">{{ key }}:</label><br>
+                        <input type="text" id="{{ key }}" name="{{ key }}" value="{{ value }}"><br><br>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+
+            <button type="submit">Send Webhook</button>
+        </form>
+        """,
+        templates=template_files,
+        editable_fields=editable_fields,
+        bot_ids=[{"id": bot[0], "name": bot[1]} for bot in database_data],  # bot_ids を渡す
+        request_form=request.form
     )
 
 if __name__ == "__main__":
