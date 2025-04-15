@@ -9,8 +9,8 @@ def run_server_app():
     server_app.run(debug=True, port=8000, use_reloader=False)
 
 if __name__ == "__main__":
-    debug_thread = threading.Thread(target=run_debug_app)
-    server_thread = threading.Thread(target=run_server_app)
+    debug_thread = threading.Thread(target=run_debug_app, daemon=True)
+    server_thread = threading.Thread(target=run_server_app, daemon=True)
 
     debug_thread.start()
     server_thread.start()

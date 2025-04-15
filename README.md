@@ -49,14 +49,14 @@
 Before running the script, grant execute permission:
 
 ```bash
-chmod +x start.sh
+chmod +x scripts/debug.sh
 ```
 
 Then, start the script with:
 
 ```bash
-./start.sh
+./scripts/debug.sh
 ```
 
 main server is on http://localhost:8000
-database server is on http://localhost:5000
+debug server is on http://localhost:10000

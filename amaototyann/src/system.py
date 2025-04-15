@@ -49,12 +49,3 @@ def transcribeWebhook(request, url, body=None):
     
 
 
-
-if __name__ == "__main__":
-   
-    # BotInfoのテスト
-    bot_info = BotInfo()
-    
-    # IDが1のデータのnameを更新
-    updated_data = bot_info.update(1, "in_group", False)
-    pprint(updated_data)
