@@ -55,6 +55,7 @@ class BotInfo:
             raise ValueError('All fields are required')
         if id in self.database['id'].values:
             raise ValueError('ID already exists')
+        self.is_updated = True
         new_entry = pd.DataFrame([{
             'id': id,
             'bot_name': bot_name,
@@ -73,6 +74,7 @@ class BotInfo:
 
     def delete_row(self, id: int):
         assert isinstance(id, int), 'ID must be an integer'
+        self.is_updated = True
 
         if id in self.database['id'].values:
             self.database = self.database[self.database['id'] != id].reset_index(drop=True)
@@ -84,6 +86,7 @@ class BotInfo:
 
     def update_value(self, id: int, column: str, value):
         assert isinstance(id, int), 'ID must be an integer'
+        self.is_updated = True
         if id not in self.database['id'].values:
             raise ValueError('ID not found')
         if column not in self.database.columns:
