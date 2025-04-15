@@ -12,6 +12,8 @@ from amaototyann.src.system import transcribeWebhook
 from amaototyann.src import messages, logger
 from amaototyann.src import db_bot, group_info_manager
 from amaototyann.src import IS_DEBUG_MODE
+from gevent import monkey
+monkey.patch_all(ssl=False)
 
 
 GAS_URL = os.getenv('GAS_URL')
