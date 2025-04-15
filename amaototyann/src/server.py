@@ -55,7 +55,7 @@ app.strict_slashes = False
 def backup_database():
     res, code = group_info_manager.backup_to_gas()
     res2, code2 = db_bot.backup_to_gas()
-    message = f"{res} - {code}, {res2} - {code2}"
+    message = f"group info: {res} - {code}\nbot info: {res2} - {code2}"
     return (message, 200) if code == 200 and code2 == 200 else ("error", 500)
   
 @app.route('/')
