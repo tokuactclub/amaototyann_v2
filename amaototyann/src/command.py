@@ -206,7 +206,11 @@ class Commands(object):
 
         # bot_infoを更新
         # in_groupカラムを、bot_idのrowだけTrue,それ以外はFalseにする
-        db_bot.database["in_group"] = db_bot.database["id"] == self.botId
+        for row in db_bot.list_rows():
+            if row["id"] == self.botId:
+                db_bot.update_value(row["id"], "in_group", True)
+            else:
+                db_bot.update_value(row["id"], "in_group", False)
 
         
         self._send_text_message(messages.CHANGE_GROUP)

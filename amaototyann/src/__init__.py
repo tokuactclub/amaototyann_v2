@@ -39,7 +39,7 @@ import requests  # type: ignore
 
 class _BotInfo:
     def __init__(self):
-        self.database = pd.DataFrame(columns=['id', 'bot_name', 'channel_access_token', 'channel_secret', 'gpt_webhook_url', 'in_group'])
+        self._database = pd.DataFrame(columns=['id', 'bot_name', 'channel_access_token', 'channel_secret', 'gpt_webhook_url', 'in_group'])
         self.is_updated = False
         self.init_database_from_gas()
 
@@ -51,7 +51,7 @@ class _BotInfo:
                     ).json()
 
         # Clear the existing database
-        self.database = pd.DataFrame(columns=['id', 'bot_name', 'channel_access_token', 'channel_secret', 'gpt_webhook_url', 'in_group'])
+        self._database = pd.DataFrame(columns=['id', 'bot_name', 'channel_access_token', 'channel_secret', 'gpt_webhook_url', 'in_group'])
 
         # Populate the database with new data
         for bot_info in BOT_INFOS:
@@ -63,12 +63,12 @@ class _BotInfo:
                 'gpt_webhook_url': bot_info[4],
                 'in_group': bot_info[5]
             }])
-            self.database = pd.concat([self.database, new_entry], ignore_index=True)
+            self._database = pd.concat([self._database, new_entry], ignore_index=True)
 
     def add_row(self, id: int, bot_name: str, channel_access_token: str, channel_secret: str, gpt_webhook_url: str, in_group: bool):
         if not all([id, bot_name, channel_access_token, channel_secret, gpt_webhook_url, in_group]):
             raise ValueError('All fields are required')
-        if id in self.database['id'].values:
+        if id in self._database['id'].values:
             raise ValueError('ID already exists')
         self.is_updated = True
         new_entry = pd.DataFrame([{
@@ -79,10 +79,10 @@ class _BotInfo:
             'gpt_webhook_url': gpt_webhook_url,
             'in_group': in_group
         }])
-        self.database = pd.concat([self.database, new_entry], ignore_index=True)
+        self._database = pd.concat([self._database, new_entry], ignore_index=True)
 
     def get_row(self, id: int):
-        entry = self.database[self.database['id'] == id]
+        entry = self._database[self._database['id'] == id]
         if entry.empty:
             raise ValueError(f'ID not found, id: {id}')
         return entry.iloc[0].to_dict()
@@ -91,25 +91,25 @@ class _BotInfo:
         assert isinstance(id, int), 'ID must be an integer'
         self.is_updated = True
 
-        if id in self.database['id'].values:
-            self.database = self.database[self.database['id'] != id].reset_index(drop=True)
+        if id in self._database['id'].values:
+            self._database = self._database[self._database['id'] != id].reset_index(drop=True)
         else:
             raise ValueError('ID not found')
 
     def list_rows(self):
-        return self.database.to_dict(orient='records')
+        return self._database.to_dict(orient='records')
 
     def update_value(self, id: int, column: str, value):
         assert isinstance(id, int), 'ID must be an integer'
         self.is_updated = True
-        if id not in self.database['id'].values:
+        if id not in self._database['id'].values:
             raise ValueError('ID not found')
-        if column not in self.database.columns:
+        if column not in self._database.columns:
             raise ValueError('Column not found')
         if column == 'in_group'and not isinstance(value, bool):
             value = True if str(value).lower() == 'true' else False
         logger.info(f"Updating {column} for ID {id} to {value}")
-        self.database.loc[self.database['id'] == id, column] = value
+        self._database.loc[self._database['id'] == id, column] = value
 
     def backup_to_gas(self):
         """Backup the current database to GAS."""
