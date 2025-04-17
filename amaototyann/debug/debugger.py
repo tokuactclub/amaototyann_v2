@@ -45,6 +45,7 @@ def index():
             response = {"error": f"Failed to load template: {str(e)}"}
 
     if request.method == "POST" and webhook_template:
+        # <-- this is the part to edit webhook_template -->
         # Update webhook_template with edited fields if applicable
         if selected_template == "message.json" and "message.text" in request.form:
             webhook_template["events"][0]["message"]["text"] = request.form["message.text"]
@@ -53,6 +54,8 @@ def index():
             # group_idを取得してjoin.jsonの値を更新
             group_id = db_group.group_id()
             webhook_template["events"][0]["source"]["groupId"] = group_id
+            
+        # <this is the end of the part to edit webhook_template -->
         try:
             # botIdが指定されていない場合はデフォルト値を使用
             bot_id = bot_id or 1

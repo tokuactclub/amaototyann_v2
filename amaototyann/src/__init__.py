@@ -40,7 +40,7 @@ import requests  # type: ignore
 class _BotInfo:
     def __init__(self):
         self._database = pd.DataFrame(columns=['id', 'bot_name', 'channel_access_token', 'channel_secret', 'gpt_webhook_url', 'in_group'])
-        self.is_updated = False
+        self._is_updated = False
         self.init_database_from_gas()
 
     def init_database_from_gas(self):
@@ -70,7 +70,7 @@ class _BotInfo:
             raise ValueError('All fields are required')
         if id in self._database['id'].values:
             raise ValueError('ID already exists')
-        self.is_updated = True
+        self._is_updated = True
         new_entry = pd.DataFrame([{
             'id': id,
             'bot_name': bot_name,
@@ -89,7 +89,7 @@ class _BotInfo:
 
     def delete_row(self, id: int):
         assert isinstance(id, int), 'ID must be an integer'
-        self.is_updated = True
+        self._is_updated = True
 
         if id in self._database['id'].values:
             self._database = self._database[self._database['id'] != id].reset_index(drop=True)
@@ -101,7 +101,7 @@ class _BotInfo:
 
     def update_value(self, id: int, column: str, value):
         assert isinstance(id, int), 'ID must be an integer'
-        self.is_updated = True
+        self._is_updated = True
         if id not in self._database['id'].values:
             raise ValueError('ID not found')
         if column not in self._database.columns:
@@ -113,7 +113,7 @@ class _BotInfo:
 
     def backup_to_gas(self):
         """Backup the current database to GAS."""
-        if not self.is_updated:
+        if not self._is_updated:
             return "not need to backup", 200
 
         # Convert the database to a list for GAS
@@ -135,7 +135,7 @@ class _BotInfo:
 
         if response.text == "success":
             logger.info("bot info backup success")
-            self.is_updated = False
+            self._is_updated = False
             return "success", 200
         else:
             logger.error("bot info backup error")
@@ -146,7 +146,7 @@ class _GroupInfo:
     def __init__(self):
         self._group_info:dict = None
         self.init_group_info_from_gas()
-        self.is_updated = False
+        self._is_updated = False
 
     def init_group_info_from_gas(self):
         """Initialize group info from GAS."""
@@ -168,7 +168,7 @@ class _GroupInfo:
             'id': group_id,
             'groupName': group_name
         }
-        self.is_updated = True
+        self._is_updated = True
 
     def group_id(self):
         if self._group_info is None:
@@ -178,7 +178,7 @@ class _GroupInfo:
    
     def backup_to_gas(self):
         """Backup group info to GAS."""
-        if not self.is_updated:
+        if not self._is_updated:
             return "not need to backup", 200
         
         if IS_DEBUG_MODE:
@@ -198,7 +198,7 @@ class _GroupInfo:
 
         if response.text == "success":
             logger.info("Group info backup success")
-            self.is_updated = False
+            self._is_updated = False
             return "success", 200
         else:
             logger.error("Group info backup error")
