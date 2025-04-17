@@ -2,9 +2,10 @@ from flask import Flask, render_template, request
 import requests
 import json
 import os
-from amaototyann.src import logger, db_bot, group_info_manager
+from amaototyann.src import logger, db_bot, db_group, integrate_flask_logger
 
 app = Flask(__name__)
+integrate_flask_logger(app)
 
 # Get the list of available webhook templates
 templates_dir = os.path.join(os.path.dirname(__file__), "webhook_templates")
@@ -50,14 +51,16 @@ def index():
 
         elif selected_template == "join.json":
             # group_idを取得してjoin.jsonの値を更新
-            group_id = group_info_manager.group_id
+            group_id = db_group.group_id
             webhook_template["events"][0]["source"]["groupId"] = group_id
         try:
             # botIdが指定されていない場合はデフォルト値を使用
             bot_id = bot_id or 1
             server_url = os.path.join(os.getenv("SERVER_URL"), "lineWebhook", str(bot_id) + "/")
             # Send the JSON payload to the specified server
+            print("before sending webhook")
             res = requests.post(server_url, json=webhook_template)
+            print(f"Webhook response: {res.status_code} - {res.text}")
             response = {
                 "status_code": res.status_code,
                 "response_body": res.json() if res.headers.get("Content-Type") == "application/json" else res.text

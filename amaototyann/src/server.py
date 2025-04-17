@@ -1,29 +1,17 @@
-## this section must be loaded before loading flask
-from gevent import monkey
-monkey.patch_all(ssl=False)
-##
-
-from flask import Flask, request, Response # type: ignore
+from flask import Flask, request, Response 
 import os
-import requests # type: ignore
+import requests 
 import time
 import threading
 
-from linebot import LineBotApi # type: ignore
-from linebot.models import TextSendMessage # type: ignore
+from linebot import LineBotApi 
+from linebot.models import TextSendMessage 
 
 from amaototyann.src.command import Commands, CommandsScripts
-from amaototyann.src.system import transcribeWebhook
-from amaototyann.src import messages, logger
-from amaototyann.src import db_bot, group_info_manager
-from amaototyann.src import IS_DEBUG_MODE
+from amaototyann.src import messages, logger, transcribeWebhook, IS_DEBUG_MODE, db_bot, db_group, integrate_flask_logger
 
 
 GAS_URL = os.getenv('GAS_URL')
-
-
-# gasから取得する
-BOT_INFOS = db_bot
 
 
 # サーバー停止を阻止し常時起動させるスクリプト
@@ -55,15 +43,16 @@ if  not server_boot_script_running or server_boot_script_running == "False":
 # Flaskのインスタンスを作成
 app = Flask(__name__)
 app.strict_slashes = False
+integrate_flask_logger(app)
 
 # databaseをスプレッドシートにバックアップするためのスクリプト
 @app.route('/backupDatabase/', methods=['GET'])
 def backup_database():
-    res, code = group_info_manager.backup_to_gas()
+    res, code = db_group.backup_to_gas()
     res2, code2 = db_bot.backup_to_gas()
-    message = f"group info: {res} - {code}\nbot info: {res2} - {code2}"
+    message = f"group info: {res} - {code}    bot info: {res2} - {code2}"
     code = 200 if code == 200 and code2 == 200 else 500
-    logger.info(message, code)
+    logger.info(f"{message}-{code}")
     return message, code
   
 @app.route('/')
@@ -77,9 +66,9 @@ def react_message_webhook(request, botId, event_index):
     logger.info("got react message webhook")
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
-    bot_info = BOT_INFOS.get_row(botId)
-    channel_access_token = bot_info["channel_access_token"]
-    gpt_url = bot_info["gpt_webhook_url"]
+    bot = db_bot.get_row(botId)
+    channel_access_token = bot["channel_access_token"]
+    gpt_url = bot["gpt_webhook_url"]
     
     message: str = request_json['events'][event_index]['message']['text']
 
@@ -113,9 +102,9 @@ def react_join_webhook(request, botId, event_index):
     # リクエストボディーをJSONに変換
     request_json = request.get_json()
 
-    bot_info = BOT_INFOS.get_row(botId)
-    channel_access_token = bot_info["channel_access_token"]
-    bot_name = bot_info["bot_name"]
+    bot = db_bot.get_row(botId)
+    channel_access_token = bot["channel_access_token"]
+    bot_name = bot["bot_name"]
 
     if IS_DEBUG_MODE:
         remaining_message_count = 200
@@ -142,13 +131,13 @@ def react_join_webhook(request, botId, event_index):
 
     # 参加したグループがリマインド対象のグループであればdatabaseを更新
     # リマインド対象のグループIDを取得 
-    TARGET_GROUP_ID = group_info_manager.group_id
+    TARGET_GROUP_ID = db_group.group_id()
     logger.info(f"target group id: {TARGET_GROUP_ID}\n, group id: {group_id}")
 
     # リマインド対象のグループIDと一致する場合
     if group_id == TARGET_GROUP_ID:
         # リマインド対象のグループに参加したことを記録
-        BOT_INFOS.update_value(botId, "in_group", True)
+        db_bot.update_value(botId, "in_group", True)
     return
 
 
@@ -168,17 +157,16 @@ def lineWebhook(botId):
         elif event['type'] == 'leave': # グループ退出イベント
             logger.info("got left webhook")    
             # グループから抜けたことを記録
-            BOT_INFOS.update_value(botId, "in_group", False)
+            db_bot.update_value(botId, "in_group", False)
           
         else:
             logger.info("not valid webhook type") 
-
     return "finish", 200
 
 # プッシュメッセージ送信用のエンドポイント
 @app.route('/pushMessage/', methods=['POST'])
 def pushMessage():
-    use_account = [account for account in BOT_INFOS.list_rows() if account["in_group"] == True]
+    use_account = [account for account in db_bot.list_rows() if account["in_group"] == True]
     if len(use_account) == 0:
         return "error", 400
     use_account = use_account[0]
@@ -200,7 +188,7 @@ def pushMessage():
 # 動作テスト用エンドポイント
 @app.route("/test")
 def test():
-    use_account = [account for account in BOT_INFOS.list_rows() if account["in_group"] == True]
+    use_account = [account for account in db_bot.list_rows() if account["in_group"] == True]
     if len(use_account) == 0:
         return "error", 400
     use_account = use_account[0]

@@ -1,13 +1,13 @@
-from linebot import LineBotApi # type: ignore
-from linebot.models import TextSendMessage # type: ignore
-import requests # type: ignore
+from linebot import LineBotApi 
+from linebot.models import TextSendMessage 
+import requests 
 from datetime import datetime, timezone, timedelta
 import os
 import json
 
 from amaototyann.src.bubble_msg import taskBubbleMsg
 from amaototyann.src import messages
-from amaototyann.src import group_info_manager, db_bot
+from amaototyann.src import db_bot, db_group
 from amaototyann.src import IS_DEBUG_MODE
 GAS_URL = os.getenv('GAS_URL')
 
@@ -51,7 +51,7 @@ class Commands(object):
             self.reply_token = self.webhook_body['events'][0]['replyToken']
         else:
             logger.info("push message")
-            self.TARGET_GROUP_ID = group_info_manager.group_id
+            self.TARGET_GROUP_ID = db_group.group_id()
             logger.info(f"target group id: {self.TARGET_GROUP_ID}\nchannel_access_token: {channel_access_token}")
 
         self.line_bot_api = LineBotApi(channel_access_token)
@@ -202,7 +202,7 @@ class Commands(object):
             group_name = "test_group_name"
 
         # group_infoを更新
-        group_info_manager.set_group_info(group_id, group_name)
+        db_group.set_group_info(group_id, group_name)
 
         # bot_infoを更新
         # in_groupカラムを、bot_idのrowだけTrue,それ以外はFalseにする

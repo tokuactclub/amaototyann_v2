@@ -7,9 +7,21 @@ from logging import getLogger, config
 if not os.path.exists("amaototyann/logs"):
     os.makedirs("amaototyann/logs")
 
+# loggerの作成
 with open("amaototyann/src/log_config.json", "r") as f:
     config.dictConfig(json.load(f))
 logger = getLogger("logger")
+
+# flaskのアクセスloggerを統合
+werkzeug_logger = getLogger("werkzeug")
+werkzeug_logger.handlers = logger.handlers
+# werkzeug_logger.setLevel(logger.level)
+
+# flask_appのloggerを統合する関数
+def integrate_flask_logger(flask_app):
+    flask_app.logger.handlers = logger.handlers
+    flask_app.logger.setLevel(logger.level)
+    flask_app.logger.propagate = False
 
 
 IS_DEBUG_MODE =  not os.getenv("IS_RENDER_SERVER", "false").lower() == "true"
@@ -18,11 +30,14 @@ if IS_DEBUG_MODE:
     load_dotenv(override=True)
 
 
+database_url = os.getenv('DATABASE_URL')
+
+
 import pandas as pd  # type: ignore
 import os
 import requests  # type: ignore
 
-class BotInfo:
+class _BotInfo:
     def __init__(self):
         self.database = pd.DataFrame(columns=['id', 'bot_name', 'channel_access_token', 'channel_secret', 'gpt_webhook_url', 'in_group'])
         self.is_updated = False
@@ -127,7 +142,7 @@ class BotInfo:
             return "error", 500
 
 
-class GroupInfo:
+class _GroupInfo:
     def __init__(self):
         self._group_info:dict = None
         self.init_group_info_from_gas()
@@ -154,16 +169,13 @@ class GroupInfo:
             'groupName': group_name
         }
         self.is_updated = True
-    @property
+
     def group_id(self):
         if self._group_info is None:
             raise ValueError("Group info not initialized")
         return self._group_info.get('id')
     
-    @group_id.setter
-    def group_id(self, value):
-        raise Exception("group_id cannot be set without other group info")
-    
+   
     def backup_to_gas(self):
         """Backup group info to GAS."""
         if not self.is_updated:
@@ -192,9 +204,86 @@ class GroupInfo:
             logger.error("Group info backup error")
             return "error", 500
 
+class BotInfo(_BotInfo):
 
-# Initialize the database manager
+    def __init__(self):
+        pass
+    def __getattribute__(self, name):
+        def wrapped(*args, **kwargs):
+            url = os.path.join(database_url, "bot", name + "/")
+            response = requests.post(url, json={
+                'args': args,
+                'kwargs': kwargs
+            })
+            if response.status_code == 200:
+                return response.json()["result"]
+            else:
+                logger.error(f"Error from server: {response.text}")
+                raise Exception(f"Error from server: {response}")
+        return wrapped
+
+class GroupInfo(_GroupInfo):
+    def __init__(self):
+        pass
+
+    def __getattribute__(self, name):
+        def wrapped(*args, **kwargs):
+            url = os.path.join(database_url, "group", name + "/")
+            response = requests.post(url, json={
+                'args': args,
+                'kwargs': kwargs
+            })
+            if response.status_code == 200:
+                return response.json()["result"]
+            else:
+                raise Exception(f"Error from server: {response.text}")
+        
+        return wrapped
+        
+
+# webhookを転送する関数
+def transcribeWebhook(request, url, body=None):
+    """webhookを転送する関数
+
+    Args:
+        request (Request): リクエスト
+        url (str): 転送先のURL
+        body (dict, optional): リクエストボディを変えたい場合指定
+
+    Returns:
+        Response: 転送先からのレスポンス
+    """
+    method = request.method
+    logger.info(f"headersType:{type(request.headers)}")
+    headers = {key: value for key, value in dict(request.headers).items() if key != 'Host'} 
+    if(not body):#bodyを指定されなければeventのbodyを利用（本来の挙動）
+        body = request.json
+    
+    logger.info(f"Method: {method}Type:{type(method)}")
+    logger.info(f"URL : {url}Type:{type(url)}")
+    logger.info(f"Headers: {headers}Type:{type(headers)}")
+    logger.info(f"Body: {body}Type:{type(body)}")
+
+    try:
+        # Reconstruct headers and forward the request
+        headers["Content-Type"] = "application/json;charset=utf-8"
+        response = requests.request(
+            method=method,
+            url=url,
+            headers=json.loads(json.dumps(headers)),
+            json=json.loads(json.dumps(body)),
+        )
+
+        logger.info('Forwarded Data:', response)
+        logger.info('HTTP Status Code:', response.status_code)
+
+        return 'Data forwarded successfully', 200
+    except Exception as e:
+        logger.error('Error:', e)
+        return 'Failed to forward data', 500
+    
+# if init database when __init__.py is imported, the database server is not ready yet
+# so we need to initialize the database when the server is started
 db_bot = BotInfo()
+db_group = GroupInfo()
 
-# Initialize group info
-group_info_manager = GroupInfo()
