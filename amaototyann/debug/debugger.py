@@ -51,7 +51,7 @@ def index():
 
         elif selected_template == "join.json":
             # group_idを取得してjoin.jsonの値を更新
-            group_id = db_group.group_id
+            group_id = db_group.group_id()
             webhook_template["events"][0]["source"]["groupId"] = group_id
         try:
             # botIdが指定されていない場合はデフォルト値を使用
