@@ -58,5 +58,28 @@ Then, start the script with:
 ./scripts/debug.sh
 ```
 
-main server is on http://localhost:8000
+main server is on http://localhost:8000  
 debug server is on http://localhost:10000
+
+---
+With debug server, you can send dummy join, leave, message webhook to local server.
+if you want to add function to this bot, and need new webhook type, you can add webhook template to `amaototyann/debug/webhook_templates` .
+
+Also, you need to edit some webhook information specialize to your environment, you can edit this on
+
+```python
+# amaototyann/debug/debugger.py
+
+# <-- this is the part to edit webhook_template -->
+# Update webhook_template with edited fields if applicable
+if selected_template == "message.json" and "message.text" in request.form:
+    pass
+
+elif selected_template == "join.json":
+    pass
+
+# << add special function here >>
+    
+# <this is the end of the part to edit webhook_template --> on 
+```
+
