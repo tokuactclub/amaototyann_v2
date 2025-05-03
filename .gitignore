@@ -2,5 +2,4 @@
 .venv/
 __pycache__/
 test.py
-.vscode/
 amaototyann/logs/app.log
