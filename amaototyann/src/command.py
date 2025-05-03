@@ -28,6 +28,10 @@ class CommandsScripts:
     HANDOVER = "!handover"
     HELLO = "!hello"
     FINISH = "!finish"
+    YOUTUBE = "!youtube"
+    INSTAGRAM = "!instagram"
+    TWITTER = "!twitter"
+    HOMEPAGE = "!homepage"
 class Commands(object):
     def __init__(self, channel_access_token, request, botId=None):
         """基本的にwebhookのコマンドを処理し、リプライメッセージで応答する。
