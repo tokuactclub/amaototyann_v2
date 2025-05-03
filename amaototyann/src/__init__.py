@@ -282,8 +282,6 @@ def transcribeWebhook(request, url, body=None):
         logger.error('Error:', e)
         return 'Failed to forward data', 500
     
-# if init database when __init__.py is imported, the database server is not ready yet
-# so we need to initialize the database when the server is started
 db_bot = BotInfo()
 db_group = GroupInfo()
 
