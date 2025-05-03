@@ -148,7 +148,7 @@ def lineWebhook(botId):
     botId = int(botId)
     # ユーザーからのメッセージを取得
     for i,event in enumerate(request.get_json()['events']):
-        if event['type'] == 'message': # メッセージイベント
+        if event['type'] == 'message' and event["message"]["type"] == "text": # textメッセージイベント
             react_message_webhook(request, botId, i)
 
         elif event['type'] == 'join': # グループ参加イベント
@@ -160,7 +160,7 @@ def lineWebhook(botId):
             db_bot.update_value(botId, "in_group", False)
           
         else:
-            logger.info("not valid webhook type") 
+            logger.info("not needed to react to this webhook") 
     return "finish", 200
 
 # プッシュメッセージ送信用のエンドポイント
