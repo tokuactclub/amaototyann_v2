@@ -6,60 +6,53 @@ from linebot.models import TextSendMessage
 import time
 
 class Converter(object):
-    def __init__(self, key: set|str, value: str, condition = "same", case_sensitive = False):
-        """_summary_
+    def __init__(self):
+        self.Tcs_same_dic = {}
+        self.Fcs_same_dic = {}
+        self.Tcs_start_dic = {}
+        self.Fcs_start_dic = {}
 
-        Args:
-            key (list): the key to convert
-            value (str): the value to convert to
-            condition (str, optional): "same", "start". Defaults to "same".
-        """
-        if isinstance(key, str):
-            if case_sensitive:
-                self.key = {key}
-            else:
-                self.key = {key.lower()}
-        elif isinstance(key, list):
-            if case_sensitive:
-                self.key = set(key)
-            else:
-                self.key = {k.lower() for k in key}
-        else:
-            if case_sensitive:
-                self.key = key
-            else:
-                self.key = {k.lower() for k in key}
-            self.key = key
-        self.value = value
-        self.condition = condition
-        self.case_sensitive = case_sensitive
     
+    def add_argument(self, key: list|str, value: str, condition = "same", case_sensitive = False):
+        if isinstance(key, str):
+            key = [key]
+
+        if case_sensitive:
+            if condition == "same":
+                self.Tcs_same_dic.update({k: value for k in key})
+            elif condition == "start":
+                self.Tcs_start_dic.update({k: value for k in key})
+        else:
+            if condition == "same":
+                self.Fcs_same_dic.update({k.lower(): value for k in key})
+            elif condition == "start":
+                self.Fcs_start_dic.update({k.lower(): value for k in key})
 
     def convert(self, message: str) -> str:
-        message = message if self.case_sensitive else message.lower()
-        if self.condition == "same":
-            if message in self.key:
-                return self.value
-        elif self.condition == "start":
-            for k in self.key:
-                if message.startswith(k):
-                    return self.value
+        # 全ての条件を満たす場合、優先度はcase_sensitive > not_case_sensitive > start > not_case_sensitive_start
+        # ただし、同じ条件であればcase_sensitiveが優先される
+        if result:=self.Tcs_same_dic.get(message):
+            return result
+        if result:=self.Fcs_same_dic.get(message.lower()):
+            return result
+        for key in self.Tcs_start_dic.keys():
+            if message.startswith(key):
+                return self.Tcs_start_dic[key]
+        for key in self.Fcs_start_dic.keys():
+            if message.lower().startswith(key):
+                return self.Fcs_start_dic[key]
         return message
 
 def convert_jp_command(message: str) -> str:
-    # 引継ぎ資料がメッセージに含まれる場合コマンドに変換
-    if message.startswith("引き継ぎ資料") or message.startswith("引継ぎ資料"):
-        message = CommandsScripts.HANDOVER
 
-    converters = [
-        Converter({"引き継ぎ資料", "引継ぎ資料"}, CommandsScripts.HANDOVER, condition="start"),
-        Converter({"Youtube", "ユーチューブ"}, CommandsScripts.YOUTUBE, condition="same"),
-        Converter({"Instagram", "インスタグラム"}, CommandsScripts.INSTAGRAM, condition="same"),
-        Converter({"Twitter", "ツイッター"}, CommandsScripts.TWITTER, condition="same"),
-        Converter({"ホームページ", "HP"}, CommandsScripts.HOMEPAGE, condition="same"),
-    ]
-    for converter in converters:
-        message = converter.convert(message)
+    converter = Converter()
+    converter.add_argument(["引き継ぎ資料", "引継ぎ資料", "ScrapBox","ひきつぎしりょう", "すくらっぷぼっくす"], CommandsScripts.HANDOVER, condition="start")
+    converter.add_argument(["Youtube", "ユーチューブ", "ようつべ"], CommandsScripts.YOUTUBE, condition="same")
+    converter.add_argument(["Instagram", "インスタグラム","いんすたぐらむ", "インスタ", "いんすた"], CommandsScripts.INSTAGRAM, condition="same")
+    converter.add_argument(["Twitter", "ツイッター","ついったー", "X", "エックス", "えっくす"], CommandsScripts.TWITTER, condition="same")
+    converter.add_argument(["ホームページ", "HP", "ほーむぺーじ"], CommandsScripts.HOMEPAGE, condition="same")
+    
+    message = converter.convert(message)
     return message
 
 def react_message_webhook(request, botId, event_index):
