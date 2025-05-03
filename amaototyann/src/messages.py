@@ -15,6 +15,18 @@ HANDOVER = """あまおとの引き継ぎ資料だよ！
 Brookの招待URLから招待を受けないとアクセスできないから気をつけて！
 https://scrapbox.io/amaotoHandover/TOP"""
 
+YOUTUBE = """あまおとのHPだよ！
+https://tokushimaactclub.web.fc2.com/"""
+
+INSTAGRAM = """あまおとのInstagramだよ！
+https://www.instagram.com/tokuactclub/"""
+
+TWITTER = """あまおとのX(旧Twitter)だよ！
+https://twitter.com/tokuactclub/"""
+
+HOMEPAGE = """あまおとのHPだよ！
+https://tokushimaactclub.web.fc2.com/"""
+
 JOIN = """{0}がグループに参加したよ！
 今月残り{1}回メッセージを送れるよ！
 返信はカウントされないから安心してね！"""

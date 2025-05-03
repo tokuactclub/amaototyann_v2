@@ -99,6 +99,14 @@ class Commands(object):
             self._send_text_message('Hello, World!')
         elif cmd == CommandsScripts.FINISH:
             self._finish_event(id=commands[1])
+        elif cmd == CommandsScripts.YOUTUBE:
+            self._send_text_message(messages.YOUTUBE)
+        elif cmd == CommandsScripts.INSTAGRAM:
+            self._send_text_message(messages.INSTAGRAM)
+        elif cmd == CommandsScripts.TWITTER:
+            self._send_text_message(messages.TWITTER)
+        elif cmd == CommandsScripts.HOMEPAGE:
+            self._send_text_message(messages.HOMEPAGE)
         else:
             self._send_text_message(messages.CMD_ERROR)
             logger.error(f"command not found: {cmd}")
