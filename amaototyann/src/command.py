@@ -112,7 +112,7 @@ class Commands(object):
 
         elif cmd == CommandsScripts.HOMEPAGE:
             self._send_text_message(messages.HOMEPAGE)
-            
+
         else:
             self._send_text_message(messages.CMD_ERROR)
             logger.error(f"command not found: {cmd}")
@@ -268,17 +268,14 @@ class Commands(object):
         """
         assert type(iso_datetime) == str, f"iso_datetime must be str, but got {type(iso_datetime)}"
         # ISO 8601 の日時文字列を UTC の datetime に変換
-        dt = datetime.fromisoformat(iso_datetime.rstrip("Z")).replace(tzinfo=timezone.utc)
+        dt = datetime.fromisoformat(iso_datetime)
+        dt = dt.replace(tzinfo=timezone.utc)
 
-        # 指定されたタイムゾーンのオフセットを適用
-        tz = timezone.utc if tz_offset_hours == 0 else timezone(timedelta(hours=tz_offset_hours))
-        local_date = dt.astimezone(tz).date()
-
-        # 現在の日付（指定のタイムゾーン）
-        today = datetime.now(tz).date()
-
+        # 現在の日付時刻をutcで取得
+        today = datetime.now(timezone.utc)
+       
         # 日数の差分を計算
-        day_difference = (local_date - today).days
+        day_difference = (dt.date() - today.date()).days
 
         return day_difference
 
