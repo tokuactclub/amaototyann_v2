@@ -164,7 +164,7 @@ class Commands(object):
                     continue
 
                 # 日時の差分を計算
-                day_difference = self._calculate_date_difference( event["date"], tz_offset_hours=9)
+                day_difference = self._calculate_date_difference( event["date"])
                 if day_difference < 0:
                     continue
 
@@ -256,7 +256,7 @@ class Commands(object):
                 self.TARGET_GROUP_ID, bubble
             )
     
-    def _calculate_date_difference(self, iso_datetime: str, tz_offset_hours: int = 0):
+    def _calculate_date_difference(self, iso_datetime: str):
         """指定の日時と現在の日時の差分を計算する
 
         Args:
