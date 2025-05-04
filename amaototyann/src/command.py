@@ -112,7 +112,7 @@ class Commands(object):
 
         elif cmd == CommandsScripts.HOMEPAGE:
             self._send_text_message(messages.HOMEPAGE)
-            
+
         else:
             self._send_text_message(messages.CMD_ERROR)
             logger.error(f"command not found: {cmd}")
@@ -163,15 +163,24 @@ class Commands(object):
                 if event["finish"] == "true":
                     continue
 
+                # event["date"]はリマインド日の00:00:00となっているが、
+                # リマインド（締切）としては23:59:59を意図しているため、約一日ずらす
+
+                ## event["date"]をdatetime型に変換し、1日加算
+                event["date"] = datetime.fromisoformat(event["date"])
+                event["date"] = event["date"] + timedelta(days=1) - timedelta(seconds=1)
+
+
                 # 日時の差分を計算
-                day_difference = self._calculate_date_difference( event["date"], tz_offset_hours=9)
+                day_difference = self._calculate_date_difference(event["date"])
                 if day_difference < 0:
                     continue
 
                 # 差分がremindDateに含まれればリマインダー対象
                 if str(day_difference) in event["remindDate"].split(","):
-                    # dateをMM/DDに変換
-                    event["date"] = datetime.fromisoformat(event["date"].rstrip("Z")).strftime("%m/%d")
+                    # dateをGMT+9のMM/DD形式に変換
+                    event["date"] = event["date"].astimezone(timezone(timedelta(hours=9))).strftime("%m/%d")
+                    
                     event["last_days"] = day_difference
                     result_events.append(event)
             # リマインド対象がなければその旨を送信
@@ -256,29 +265,25 @@ class Commands(object):
                 self.TARGET_GROUP_ID, bubble
             )
     
-    def _calculate_date_difference(self, iso_datetime: str, tz_offset_hours: int = 0):
+    def _calculate_date_difference(self, dt: datetime):
         """指定の日時と現在の日時の差分を計算する
 
         Args:
-            iso_datetime (str): ISO 8601 形式の日時文字列. 例: "2021-01-01T00:00:00Z"
-            tz_offset_hours (int, optional): タイムゾーンのオフセット（時間）. Defaults to 0.
+            dt (datetime): datetime object
 
         Returns:
             _type_: 日数の差分
         """
-        assert type(iso_datetime) == str, f"iso_datetime must be str, but got {type(iso_datetime)}"
-        # ISO 8601 の日時文字列を UTC の datetime に変換
-        dt = datetime.fromisoformat(iso_datetime.rstrip("Z")).replace(tzinfo=timezone.utc)
+        assert type(dt) == datetime, f"datetime must be datetime object, but got {type(dt)}"
 
-        # 指定されたタイムゾーンのオフセットを適用
-        tz = timezone.utc if tz_offset_hours == 0 else timezone(timedelta(hours=tz_offset_hours))
-        local_date = dt.astimezone(tz).date()
+        dt = dt.replace(tzinfo=timezone.utc)
 
-        # 現在の日付（指定のタイムゾーン）
-        today = datetime.now(tz).date()
-
+        # 現在の日付時刻をutcで取得
+        today = datetime.now(timezone.utc)
+       
         # 日数の差分を計算
-        day_difference = (local_date - today).days
+        # ここで時間以下は切り捨てられる
+        day_difference = (dt - today).days
 
         return day_difference
 
