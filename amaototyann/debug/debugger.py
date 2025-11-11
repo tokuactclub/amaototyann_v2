@@ -1,7 +1,7 @@
-from flask import Flask, render_template, request
-import requests
 import json
 import os
+from flask import Flask, render_template, request
+import requests
 from amaototyann.src import logger, db_bot, db_group, integrate_flask_logger
 
 app = Flask(__name__)
@@ -11,6 +11,7 @@ integrate_flask_logger(app)
 templates_dir = os.path.join(os.path.dirname(__file__), "webhook_templates")
 template_files = [f for f in os.listdir(templates_dir) if f.endswith(".json")]
 
+
 def fetch_database_data():
     """Fetch the latest database data."""
     try:
@@ -18,8 +19,9 @@ def fetch_database_data():
         database_data = bot_info.list_rows()
         return list(map(lambda x: [x["id"], x["bot_name"], x["in_group"]], database_data))
     except Exception as e:
-        logger.error(f"Failed to fetch database data: {str(e)}")
+        logger.error("Failed to fetch database data: %s" % str(e))
         return []
+
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -34,7 +36,7 @@ def index():
         try:
             # Load the selected template
             template_path = os.path.join(templates_dir, selected_template)
-            with open(template_path, "r") as f:
+            with open(template_path, "r", encoding="utf-8") as f:
                 webhook_template = json.load(f)
             webhook_template["debug"] = True
 
@@ -54,15 +56,18 @@ def index():
             # group_idを取得してjoin.jsonの値を更新
             group_id = db_group.group_id()
             webhook_template["events"][0]["source"]["groupId"] = group_id
-            
+
         # <this is the end of the part to edit webhook_template -->
         try:
             # botIdが指定されていない場合はデフォルト値を使用
             bot_id = bot_id or 1
-            server_url = os.path.join(os.getenv("SERVER_URL"), "lineWebhook", str(bot_id) + "/")
+            server_url = os.getenv("SERVER_URL")
+            if server_url is None:
+                raise Exception("SERVER_URL is not set")
+            server_url = os.path.join(server_url, "lineWebhook", str(bot_id) + "/")
             # Send the JSON payload to the specified server
             print("before sending webhook")
-            res = requests.post(server_url, json=webhook_template)
+            res = requests.post(server_url, json=webhook_template, timeout=60)
             print(f"Webhook response: {res.status_code} - {res.text}")
             response = {
                 "status_code": res.status_code,
@@ -73,7 +78,7 @@ def index():
             database_data = fetch_database_data()
 
         except Exception as e:
-            response = {"error": str(e)}
+            response = {"error": f"An error occurred: {e}"}
 
     return render_template(
         "webhook_sender.html",
@@ -84,6 +89,7 @@ def index():
         bot_ids=[{"id": bot[0], "name": bot[1]} for bot in database_data],  # bot_idリストを渡す
         request_form=request.form  # request.formをテンプレートに渡す
     )
+
 
 @app.route("/update_template", methods=["POST"])
 def update_template():
@@ -96,7 +102,7 @@ def update_template():
         try:
             # Load the selected template
             template_path = os.path.join(templates_dir, selected_template)
-            with open(template_path, "r") as f:
+            with open(template_path, "r", encoding="utf-8") as f:
                 webhook_template = json.load(f)
             webhook_template["debug"] = True
 
@@ -113,6 +119,7 @@ def update_template():
         bot_ids=[{"id": bot[0], "name": bot[1]} for bot in database_data],  # bot_ids を渡す
         request_form=request.form
     )
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=10000)
