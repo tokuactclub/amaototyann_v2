@@ -237,6 +237,10 @@ class Commands(object):
         else:
             group_name = "test_group_name"
 
+        if group_name is None:
+            self._send_text_message(messages.CHANGE_GROUP_ERROR)
+            return
+
         # group_infoを更新
         db_group.set_group_info(group_id, group_name)
 
