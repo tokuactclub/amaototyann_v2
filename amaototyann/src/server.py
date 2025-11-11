@@ -1,9 +1,8 @@
-from flask import Flask, request, Response 
 import os
-import requests 
 import time
 import threading
-
+import requests
+from flask import Flask, request, Response
 
 from amaototyann.src.command import Commands
 from amaototyann.src import logger, db_bot, db_group, integrate_flask_logger
@@ -28,22 +27,23 @@ def boot_server():
         time.sleep(60 * 3)
         # time.sleep(20)
 
+
 server_boot_script_running = os.getenv("SERVER_BOOT_SCRIPT_RUNNING")
-if  not server_boot_script_running or server_boot_script_running == "False":
+if not server_boot_script_running or server_boot_script_running == "False":
     # 別ワーカーで実行されていない場合のみ起動
     os.environ["SERVER_BOOT_SCRIPT_RUNNING"] = "True"
     thread = threading.Thread(target=boot_server)
     thread.start()
 
 
-
-    
 # Flaskのインスタンスを作成
 app = Flask(__name__)
 app.strict_slashes = False
 integrate_flask_logger(app)
 
 # databaseをスプレッドシートにバックアップするためのスクリプト
+
+
 @app.route('/backupDatabase/', methods=['GET'])
 def backup_database():
     res, code = db_group.backup_to_gas()
@@ -52,7 +52,8 @@ def backup_database():
     code = 200 if code == 200 and code2 == 200 else 500
     logger.info(f"{message}-{code}")
     return message, code
-  
+
+
 @app.route('/')
 def hello_world():
     # app.logを返す
@@ -61,29 +62,29 @@ def hello_world():
     return Response(log, mimetype='text/plain')
 
 
-
 # lineWebhook用のエンドポイント
 @app.route('/lineWebhook/<botId>/', methods=['POST'])
 def lineWebhook(botId):
     logger.info("got LINE webhook, webhook type is on next line")
     botId = int(botId)
     # ユーザーからのメッセージを取得
-    for i,event in enumerate(request.get_json()['events']):
-        if event['type'] == 'message' and event["message"]["type"] == "text": # textメッセージイベント
+    for i, event in enumerate(request.get_json()['events']):
+        if event['type'] == 'message' and event["message"]["type"] == "text":  # textメッセージイベント
             react_message_webhook(request, botId, i)
 
-        elif event['type'] == 'join': # グループ参加イベント
+        elif event['type'] == 'join':  # グループ参加イベント
             react_join_webhook(request, botId, i)
 
-        elif event['type'] == 'leave': # グループ退出イベント
+        elif event['type'] == 'leave':  # グループ退出イベント
             react_leave_webhook(request, botId, i)
-            
-          
+
         else:
-            logger.info("not needed to react to this webhook") 
+            logger.info("not needed to react to this webhook")
     return "finish", 200
 
 # プッシュメッセージ送信用のエンドポイント
+
+
 @app.route('/pushMessage/', methods=['POST'])
 def pushMessage():
     use_account = [account for account in db_bot.list_rows() if account["in_group"] == True]
@@ -93,8 +94,8 @@ def pushMessage():
     channel_access_token = use_account["channel_access_token"]
 
     # プッシュメッセージを送信
-    request_json:dict = request.get_json()
-    cmd = request_json.get("cmd") # lineWebhookのコマンドと同じ形式 
+    request_json: dict = request.get_json()
+    cmd = request_json.get("cmd")  # lineWebhookのコマンドと同じ形式
     if cmd is None:
         return "error cmd isn't defined", 400
     # コマンド処理
@@ -106,6 +107,8 @@ def pushMessage():
         return "error", 400
 
 # 動作テスト用エンドポイント
+
+
 @app.route("/test")
 def test():
     use_account = [account for account in db_bot.list_rows() if account["in_group"] == True]
@@ -115,7 +118,7 @@ def test():
     channel_access_token = use_account[1]
 
     # プッシュメッセージを送信
-    cmd = "!reminder" # lineWebhookのコマンドと同じ形式 
+    cmd = "!reminder"  # lineWebhookのコマンドと同じ形式
 
     # コマンド処理
 
@@ -126,8 +129,5 @@ def test():
         return "error", 400
 
 
-
-
-
 if __name__ == '__main__':
-    app.run(debug=True, port = 8000)
+    app.run(debug=True, port=8000)

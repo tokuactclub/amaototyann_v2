@@ -1,9 +1,13 @@
-from linebot.models import FlexSendMessage 
+from linebot.models import FlexSendMessage
+
+
 class taskBubbleMsg:
     """締切りタスクのバブルメッセージを作成するクラス
     """
+
     def __init__(self):
         self.contents = []
+
     def addReminder(self, job, person, deadline, last_days, task, memo, id):
         """リマインダーを追加する
 
@@ -17,12 +21,11 @@ class taskBubbleMsg:
             id (str): タスクのID
         """
 
-        
         # テキスト形式で出力するコード。残しておく。
         # strict = "進捗を報告してください" if last_days < 4 else ""
         # msg = "\n".join(filter(lambda x: x != "", [f"{job}{person}", f"締切：{task}", strict, memo, f"残り日数：{last_days}"]))
         # string_messages.append(msg)
-        
+
         bubble = {
             "type": "bubble",
             "size": "deca",
@@ -100,25 +103,23 @@ class taskBubbleMsg:
         }
 
         self.contents.append(bubble)
-    
+
     def getMessages(self):
         """作成したメッセージを取得する
 
         Returns:
             list: メッセージのリスト
         """
-        messages = [self._create_msg(self.contents[i:i+12]) for i in range(0, len(self.contents), 12)]
+        messages = [self._create_msg(self.contents[i:i + 12]) for i in range(0, len(self.contents), 12)]
         self.contents.clear()
         return messages
-    
-    def _create_msg(self,contents):
+
+    def _create_msg(self, contents):
         json = {
-        "type": "flex",
-        "altText": "リマインダー",
-        "contents":{
-        "type": "carousel",
-        "contents": contents}       
+            "type": "flex",
+            "altText": "リマインダー",
+            "contents": {
+                "type": "carousel",
+                "contents": contents}
         }
         return FlexSendMessage.new_from_json_dict(json)
-
-    

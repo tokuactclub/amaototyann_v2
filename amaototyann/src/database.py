@@ -1,6 +1,6 @@
 
-from flask import Flask, request, jsonify 
-import pandas as pd 
+from flask import Flask, request, jsonify
+import pandas as pd
 from amaototyann.src import logger
 from amaototyann.src import _BotInfo, _GroupInfo, integrate_flask_logger
 
@@ -14,10 +14,11 @@ db_group = _GroupInfo()
 
 @app.route('/')
 def route():
-    return "Hello, World!"   
+    return "Hello, World!"
+
 
 @app.route('/<db_type>/<function>/', methods=['POST'])
-def db_endpoint(db_type,function):
+def db_endpoint(db_type, function):
     args_kwargs = request.get_json() or {}
     args = args_kwargs.get('args', [])
     kwargs = args_kwargs.get('kwargs', {})
@@ -43,4 +44,3 @@ def db_endpoint(db_type,function):
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-    

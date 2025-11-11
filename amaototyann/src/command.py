@@ -1,9 +1,10 @@
-from linebot import LineBotApi 
-from linebot.models import TextSendMessage 
-import requests 
+from logging import getLogger, config
 from datetime import datetime, timezone, timedelta
 import os
 import json
+from linebot import LineBotApi
+from linebot.models import TextSendMessage
+import requests
 
 from amaototyann.src.bubble_msg import taskBubbleMsg
 from amaototyann.src import messages
@@ -12,7 +13,6 @@ from amaototyann.src import IS_DEBUG_MODE
 GAS_URL = os.getenv('GAS_URL')
 
 # loggerの設定
-from logging import getLogger, config
 with open("amaototyann/src/log_config.json", "r") as f:
     config.dictConfig(json.load(f))
 logger = getLogger("logger")
@@ -32,6 +32,8 @@ class CommandsScripts:
     INSTAGRAM = "!instagram"
     TWITTER = "!twitter"
     HOMEPAGE = "!homepage"
+
+
 class Commands(object):
     def __init__(self, channel_access_token, request, botId=None):
         """基本的にwebhookのコマンドを処理し、リプライメッセージで応答する。
@@ -48,7 +50,7 @@ class Commands(object):
         self.is_webhook_request = bool(body_json.get("events"))
         if self.is_webhook_request:
             self.webhook_body = body_json
-        
+
         if self.is_webhook_request:  # requestがwebhookの場合
             logger.info("webhook request")
             self.botId = int(botId)
@@ -59,15 +61,15 @@ class Commands(object):
             logger.info(f"target group id: {self.TARGET_GROUP_ID}\nchannel_access_token: {channel_access_token}")
 
         self.line_bot_api = LineBotApi(channel_access_token)
-        
+
     def process(self, cmd):
         """コマンドを処理する。
         Args:
             cmd (str): !から始まるコマンド
         """
         return self._command_process(cmd)
-    
-    def _command_process(self, cmd:str):
+
+    def _command_process(self, cmd: str):
         """コマンドの処理を行う
 
         Args:
@@ -80,7 +82,7 @@ class Commands(object):
 
         elif cmd == CommandsScripts.CHANGE_GROUP:
             self._change_group()
-            
+
         elif cmd == CommandsScripts.REMINDER:
             self._reminder()
 
@@ -119,13 +121,12 @@ class Commands(object):
             return False
         return True
 
-
     def _practice(self):
         try:
             response = requests.post(
                 GAS_URL,
-                json={"cmd":"practice"},
-                )
+                json={"cmd": "practice"},
+            )
             logger.info(f"response: {response}")
             events = response.json()
             logger.info(f"events: {events}")
@@ -133,16 +134,16 @@ class Commands(object):
                 events = list(map(
                     lambda x: messages.PRACTICE.format(x["place"], x["start"].split()[3][:-3], x["end"].split()[3][:-3], "\n" + x["memo"] if x["memo"] else ""),
                     events
-                    ))
+                ))
 
             # GASのタイム表記の移行に伴う例外処理
             except Exception as e:
                 events = list(map(
                     lambda x: messages.PRACTICE.format(x["place"], x["start"], x["end"], "\n" + x["memo"] if x["memo"] else ""),
                     events
-                    ))
+                ))
             logger.info(events)
-            if len(events)>0:
+            if len(events) > 0:
                 self._send_text_message("\n\n".join(events))
             elif self.is_webhook_request:
                 self._send_text_message(messages.NO_PRACTICE)
@@ -153,8 +154,8 @@ class Commands(object):
         try:
             response = requests.post(
                 GAS_URL,
-                json={"cmd":"reminder"},
-                )
+                json={"cmd": "reminder"},
+            )
             events = response.json()
             # リマインダー対象のイベントを取得
             result_events = []
@@ -166,10 +167,9 @@ class Commands(object):
                 # event["date"]はリマインド日の00:00:00となっているが、
                 # リマインド（締切）としては23:59:59を意図しているため、約一日ずらす
 
-                ## event["date"]をdatetime型に変換し、1日加算
+                # event["date"]をdatetime型に変換し、1日加算
                 event["date"] = datetime.fromisoformat(event["date"])
                 event["date"] = event["date"] + timedelta(days=1) - timedelta(seconds=1)
-
 
                 # 日時の差分を計算
                 day_difference = self._calculate_date_difference(event["date"])
@@ -180,7 +180,7 @@ class Commands(object):
                 if str(day_difference) in event["remindDate"].split(","):
                     # dateをGMT+9のMM/DD形式に変換
                     event["date"] = event["date"].astimezone(timezone(timedelta(hours=9))).strftime("%m/%d")
-                    
+
                     event["last_days"] = day_difference
                     result_events.append(event)
             # リマインド対象がなければその旨を送信
@@ -208,8 +208,8 @@ class Commands(object):
         try:
             response = requests.post(
                 GAS_URL,
-                json={"cmd":"finish","options":{"id":id}},
-                )
+                json={"cmd": "finish", "options": {"id": id}},
+            )
             task_name = response.text
             if task_name != "error":
                 self._send_text_message(f"{task_name}の通知を終わるよ！")
@@ -217,7 +217,7 @@ class Commands(object):
                 self._send_text_message("エラーで通知を終われなかったよ！ごめんね！")
         except Exception as e:
             logger.exception(e)
-    
+
     def _change_group(self):
         group_id = self.webhook_body['events'][0]['source']['groupId']
         logger.info(f"change group: {group_id}")
@@ -239,7 +239,6 @@ class Commands(object):
             else:
                 db_bot.update_value(row["id"], "in_group", False)
 
-        
         self._send_text_message(messages.CHANGE_GROUP)
 
     def _send_text_message(self, text):
@@ -253,6 +252,7 @@ class Commands(object):
             self.line_bot_api.push_message(
                 self.TARGET_GROUP_ID, TextSendMessage(text=text)
             )
+
     def _send_bubble_message(self, bubble):
         if IS_DEBUG_MODE:
             logger.info(f"[DEBUG MODE] Bubble Message: {bubble}")
@@ -264,7 +264,7 @@ class Commands(object):
             self.line_bot_api.push_message(
                 self.TARGET_GROUP_ID, bubble
             )
-    
+
     def _calculate_date_difference(self, dt: datetime):
         """指定の日時と現在の日時の差分を計算する
 
@@ -280,12 +280,13 @@ class Commands(object):
 
         # 現在の日付時刻をutcで取得
         today = datetime.now(timezone.utc)
-       
+
         # 日数の差分を計算
         # ここで時間以下は切り捨てられる
         day_difference = (dt - today).days
 
         return day_difference
 
+
 if __name__ == "__main__":
-    Commands(channel_access_token="test",request="test", debug=True).process("!reminder")
+    Commands(channel_access_token="test", request="test").process("!reminder")
