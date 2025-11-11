@@ -1,9 +1,9 @@
-from amaototyann.src.command import Commands, CommandsScripts
-from amaototyann.src import messages, logger, transcribeWebhook, IS_DEBUG_MODE, db_bot, db_group
 
+import time
 from linebot import LineBotApi
 from linebot.models import TextSendMessage
-import time
+from amaototyann.src.command import Commands, CommandsScripts
+from amaototyann.src import messages, logger, transcribeWebhook, IS_DEBUG_MODE, db_bot, db_group
 
 
 class Converter(object):
@@ -35,12 +35,13 @@ class Converter(object):
             return result
         if result := self.Fcs_same_dic.get(message.lower()):
             return result
-        for key in self.Tcs_start_dic.keys():
+
+        for key, val in self.Tcs_start_dic.items():
             if message.startswith(key):
-                return self.Tcs_start_dic[key]
-        for key in self.Fcs_start_dic.keys():
+                return val
+        for key, val in self.Fcs_start_dic.items():
             if message.lower().startswith(key):
-                return self.Fcs_start_dic[key]
+                return val
         return message
 
 
