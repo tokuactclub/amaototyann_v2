@@ -96,9 +96,7 @@ class Commands(object):
             self._practice()
 
         elif cmd == CommandsScripts.PLACE:
-            # TODO 活動場所メッセージ送信
-            # 現在登録機構がないためpass
-            pass
+            self._place()
 
         elif cmd == CommandsScripts.HANDOVER:
             self._send_text_message(messages.HANDOVER)
@@ -107,7 +105,7 @@ class Commands(object):
             self._send_text_message('Hello, World!')
 
         elif cmd == CommandsScripts.FINISH:
-            self._finish_event(id=commands[1])
+            self._finish_event(event_id=commands[1])
 
         elif cmd == CommandsScripts.YOUTUBE:
             self._send_text_message(messages.YOUTUBE)
@@ -156,6 +154,12 @@ class Commands(object):
                 self._send_text_message(messages.NO_PRACTICE)
         except Exception as e:
             logger.exception(e)
+
+    def _place(self):
+        # msg = "あまおとがとっている場所は{0}だよ！"
+        # 実装するには、練習日以外の活動場所を記録するシステムの構築が必要
+        # 作成する場合はヘルプコマンドも修正すること
+        self._send_text_message(messages.PLACE)
 
     def _reminder(self):
         try:
@@ -212,11 +216,11 @@ class Commands(object):
         except Exception as e:
             logger.exception(e)
 
-    def _finish_event(self, id):
+    def _finish_event(self, event_id):
         try:
             response = requests.post(
                 GAS_URL,
-                json={"cmd": "finish", "options": {"id": id}},
+                json={"cmd": "finish", "options": {"id": event_id}},
                 timeout=60
             )
             task_name = response.text
@@ -287,8 +291,7 @@ class Commands(object):
         Returns:
             _type_: 日数の差分
         """
-        assert type(dt) == datetime, f"datetime must be datetime object, but got {type(dt)}"
-
+        assert isinstance(dt, datetime), f"dt must be datetime object, but got {type(dt)}"
         dt = dt.replace(tzinfo=timezone.utc)
 
         # 現在の日付時刻をutcで取得

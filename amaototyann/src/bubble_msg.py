@@ -1,3 +1,4 @@
+"""バブルメッセージを作成するモジュール"""
 from linebot.models import FlexSendMessage
 
 
