@@ -1,6 +1,7 @@
 from logging import getLogger, config
 from datetime import datetime, timezone, timedelta
 import json
+from typing import Optional
 from linebot import LineBotApi
 from linebot.models import TextSendMessage
 import requests
@@ -83,6 +84,7 @@ class Commands(object):
         """
         commands = cmd.split()
         cmd = commands[0]
+        args = [] if len(commands) < 2 else commands[1:]
         if cmd == CommandsScripts.HELP:
             self._send_text_message(messages.HELP)
 
@@ -90,7 +92,7 @@ class Commands(object):
             self._change_group()
 
         elif cmd == CommandsScripts.REMINDER:
-            self._reminder()
+            self._reminder(*args)
 
         elif cmd == CommandsScripts.PRACTICE:
             self._practice()
@@ -161,7 +163,7 @@ class Commands(object):
         # 作成する場合はヘルプコマンドも修正すること
         self._send_text_message(messages.PLACE)
 
-    def _reminder(self):
+    def _reminder(self, day_left: Optional[str] = None):
         try:
             response = requests.post(
                 GAS_URL,
@@ -188,8 +190,16 @@ class Commands(object):
                 if day_difference < 0:
                     continue
 
-                # 差分がremindDateに含まれればリマインダー対象
-                if str(day_difference) in event["remindDate"].split(","):
+                # リマインド対象日を判定
+                target_dates = []
+                if day_left is not None:
+                    # 指定されたday_leftのみリマインダー対象
+                    target_dates.append(day_left)
+                else:
+                    # 差分がremindDateに含まれればリマインダー対象
+                    target_dates = event["remindDate"].split(",")
+
+                if str(day_difference) in target_dates:
                     # dateをGMT+9のMM/DD形式に変換
                     event["date"] = event["date"].astimezone(timezone(timedelta(hours=9))).strftime("%m/%d")
 
