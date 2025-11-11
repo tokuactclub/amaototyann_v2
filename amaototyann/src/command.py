@@ -1,25 +1,22 @@
 from logging import getLogger, config
 from datetime import datetime, timezone, timedelta
-import os
 import json
 from linebot import LineBotApi
 from linebot.models import TextSendMessage
 import requests
 
 from amaototyann.src.bubble_msg import taskBubbleMsg
-from amaototyann.src import messages
-from amaototyann.src import db_bot, db_group
-from amaototyann.src import IS_DEBUG_MODE
-GAS_URL = os.getenv('GAS_URL')
+from amaototyann.src import IS_DEBUG_MODE, GAS_URL, messages, db_bot, db_group
 
 # loggerの設定
-with open("amaototyann/src/log_config.json", "r") as f:
+with open("amaototyann/src/log_config.json", "r", encoding="utf-8") as f:
     config.dictConfig(json.load(f))
 logger = getLogger("logger")
 
 
 # コマンドの文字列を格納するクラス
 class CommandsScripts:
+    """コマンドの文字列を格納するクラス"""
     HELP = "!help"
     CHANGE_GROUP = "!changeGroup"
     REMINDER = "!reminder"
@@ -35,6 +32,8 @@ class CommandsScripts:
 
 
 class Commands(object):
+    """コマンドを処理するクラス"""
+
     def __init__(self, channel_access_token, request, botId=None):
         """基本的にwebhookのコマンドを処理し、リプライメッセージで応答する。
         ただし一部関数はwebhookを介さずともpushメッセージにより対応する。
@@ -44,7 +43,8 @@ class Commands(object):
             request (bool, optional): webhookやpostで受け取ったrequestそのもの
             botId (str, optional): botのID. messageからコマンドを実行する際必要
         """
-        logger.info(f"run Commands in {'debug' if IS_DEBUG_MODE else 'normal'} mode")
+        mode_str = 'debug' if IS_DEBUG_MODE else 'normal'
+        logger.info("run Commands in %s mode", mode_str)
 
         body_json = request.get_json()
         self.is_webhook_request = bool(body_json.get("events"))
@@ -53,12 +53,18 @@ class Commands(object):
 
         if self.is_webhook_request:  # requestがwebhookの場合
             logger.info("webhook request")
+            if botId is None:
+                raise ValueError("botId is required for webhook requests")
             self.botId = int(botId)
             self.reply_token = self.webhook_body['events'][0]['replyToken']
         else:
             logger.info("push message")
             self.TARGET_GROUP_ID = db_group.group_id()
-            logger.info(f"target group id: {self.TARGET_GROUP_ID}\nchannel_access_token: {channel_access_token}")
+            logger.info(
+                "target group id: %s\nchannel_access_token: %s",
+                self.TARGET_GROUP_ID,
+                channel_access_token
+            )
 
         self.line_bot_api = LineBotApi(channel_access_token)
 
@@ -117,7 +123,7 @@ class Commands(object):
 
         else:
             self._send_text_message(messages.CMD_ERROR)
-            logger.error(f"command not found: {cmd}")
+            logger.error("command not found: %s", cmd)
             return False
         return True
 
@@ -126,10 +132,11 @@ class Commands(object):
             response = requests.post(
                 GAS_URL,
                 json={"cmd": "practice"},
+                timeout=60
             )
-            logger.info(f"response: {response}")
+            logger.info("response: %s", response)
             events = response.json()
-            logger.info(f"events: {events}")
+            logger.info("events: %s", events)
             try:
                 events = list(map(
                     lambda x: messages.PRACTICE.format(x["place"], x["start"].split()[3][:-3], x["end"].split()[3][:-3], "\n" + x["memo"] if x["memo"] else ""),
@@ -137,12 +144,12 @@ class Commands(object):
                 ))
 
             # GASのタイム表記の移行に伴う例外処理
-            except Exception as e:
+            except Exception:
                 events = list(map(
                     lambda x: messages.PRACTICE.format(x["place"], x["start"], x["end"], "\n" + x["memo"] if x["memo"] else ""),
                     events
                 ))
-            logger.info(events)
+            logger.info("events: %s", events)
             if len(events) > 0:
                 self._send_text_message("\n\n".join(events))
             elif self.is_webhook_request:
@@ -155,6 +162,7 @@ class Commands(object):
             response = requests.post(
                 GAS_URL,
                 json={"cmd": "reminder"},
+                timeout=60
             )
             events = response.json()
             # リマインダー対象のイベントを取得
@@ -209,6 +217,7 @@ class Commands(object):
             response = requests.post(
                 GAS_URL,
                 json={"cmd": "finish", "options": {"id": id}},
+                timeout=60
             )
             task_name = response.text
             if task_name != "error":
@@ -220,7 +229,7 @@ class Commands(object):
 
     def _change_group(self):
         group_id = self.webhook_body['events'][0]['source']['groupId']
-        logger.info(f"change group: {group_id}")
+        logger.info("change group: %s", group_id)
 
         # group_id から lineのapiでgroup_name を取得
         if not IS_DEBUG_MODE:
@@ -243,7 +252,7 @@ class Commands(object):
 
     def _send_text_message(self, text):
         if IS_DEBUG_MODE:
-            logger.info(f"[DEBUG MODE] Message: {text}")
+            logger.info("[DEBUG MODE] Message: %s", text)
         elif self.is_webhook_request:
             self.line_bot_api.reply_message(
                 self.reply_token, TextSendMessage(text=text)
@@ -255,7 +264,7 @@ class Commands(object):
 
     def _send_bubble_message(self, bubble):
         if IS_DEBUG_MODE:
-            logger.info(f"[DEBUG MODE] Bubble Message: {bubble}")
+            logger.info("[DEBUG MODE] Bubble Message: %s", bubble)
         elif self.is_webhook_request:
             self.line_bot_api.reply_message(
                 self.reply_token, bubble

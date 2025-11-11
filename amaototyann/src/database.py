@@ -1,11 +1,9 @@
 
 from flask import Flask, request, jsonify
-import pandas as pd
-from amaototyann.src import logger
 from amaototyann.src import _BotInfo, _GroupInfo, integrate_flask_logger
 
 app = Flask(__name__)
-app.strict_slashes = False
+app.strict_slashes = False  # type: ignore
 integrate_flask_logger(app)
 
 db_bot = _BotInfo()
