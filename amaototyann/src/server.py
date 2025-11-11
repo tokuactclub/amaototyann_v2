@@ -39,7 +39,7 @@ if not server_boot_script_running or server_boot_script_running == "False":
 
 # Flaskのインスタンスを作成
 app = Flask(__name__)
-app.strict_slashes = False
+app.strict_slashes = False  # type: ignore
 integrate_flask_logger(app)
 
 
