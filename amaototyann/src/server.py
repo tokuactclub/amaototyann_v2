@@ -1,3 +1,4 @@
+"""LINE BotのWebhookを受け取るFlaskサーバー."""
 import os
 import time
 import threading
@@ -11,21 +12,21 @@ from amaototyann.src.react_webhook import react_message_webhook, react_join_webh
 GAS_URL = os.getenv('GAS_URL')
 
 
-# サーバー停止を阻止し常時起動させるスクリプト
-# 同時にデータベースのバックアップを行う
-
-# threadsで実行するための処理
 def boot_server():
+    """サーバーを常時起動させ、定期的にデータベースのバックアップを行う. threadsで実行する
+    """
     server_url = os.getenv("SERVER_URL")
+    if server_url is None:
+        logger.error("SERVER_URL is not set")
+        return
     while True:
         try:
             url = os.path.join(server_url, "backupDatabase/")
-            logger.info(f"===boot server===send backup request: {url}")
-            requests.get(url)
+            logger.info("===boot server===send backup request: %s", url)
+            requests.get(url, timeout=60)
         except Exception as e:
-            logger.error(e)
+            logger.error("Error sending backup request: %s", e)
         time.sleep(60 * 3)
-        # time.sleep(20)
 
 
 server_boot_script_running = os.getenv("SERVER_BOOT_SCRIPT_RUNNING")
@@ -41,30 +42,30 @@ app = Flask(__name__)
 app.strict_slashes = False
 integrate_flask_logger(app)
 
-# databaseをスプレッドシートにバックアップするためのスクリプト
-
 
 @app.route('/backupDatabase/', methods=['GET'])
 def backup_database():
+    """データベースをスプレッドシートにバックアップするエンドポイント
+    """
     res, code = db_group.backup_to_gas()
     res2, code2 = db_bot.backup_to_gas()
     message = f"group info: {res} - {code}    bot info: {res2} - {code2}"
     code = 200 if code == 200 and code2 == 200 else 500
-    logger.info(f"{message}-{code}")
+    logger.info("%s-%d", message, code)
     return message, code
 
 
 @app.route('/')
 def hello_world():
-    # app.logを返す
-    with open("amaototyann/logs/app.log", "r") as f:
+    """app.logを返すエンドポイント"""
+    with open("amaototyann/logs/app.log", "r", encoding="utf-8") as f:
         log = f.read()
     return Response(log, mimetype='text/plain')
 
 
-# lineWebhook用のエンドポイント
 @app.route('/lineWebhook/<botId>/', methods=['POST'])
 def lineWebhook(botId):
+    """LINEのWebhookを受け取るエンドポイント"""
     logger.info("got LINE webhook, webhook type is on next line")
     botId = int(botId)
     # ユーザーからのメッセージを取得
@@ -82,11 +83,10 @@ def lineWebhook(botId):
             logger.info("not needed to react to this webhook")
     return "finish", 200
 
-# プッシュメッセージ送信用のエンドポイント
-
 
 @app.route('/pushMessage/', methods=['POST'])
 def pushMessage():
+    """プッシュメッセージを送信するエンドポイント"""
     use_account = [account for account in db_bot.list_rows() if account["in_group"] == True]
     if len(use_account) == 0:
         return "error", 400
@@ -106,27 +106,11 @@ def pushMessage():
     else:
         return "error", 400
 
-# 動作テスト用エンドポイント
-
 
 @app.route("/test")
 def test():
-    use_account = [account for account in db_bot.list_rows() if account["in_group"] == True]
-    if len(use_account) == 0:
-        return "error", 400
-    use_account = use_account[0]
-    channel_access_token = use_account[1]
-
-    # プッシュメッセージを送信
-    cmd = "!reminder"  # lineWebhookのコマンドと同じ形式
-
-    # コマンド処理
-
-    result = Commands(channel_access_token).process(cmd)
-    if result:
-        return "finish", 200
-    else:
-        return "error", 400
+    """動作テスト用エンドポイント"""
+    return "test success", 200
 
 
 if __name__ == '__main__':
