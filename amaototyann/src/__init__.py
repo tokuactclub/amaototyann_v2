@@ -234,7 +234,7 @@ class BotInfo(_BotInfo):
                 return response.json()["result"]
             else:
                 logger.error("Error from server: %s", response.text)
-                raise Exception("Error from server: %s", response.text)
+                raise Exception("Error from server: %s" % response.text)
         return wrapped
 
 
@@ -255,7 +255,7 @@ class GroupInfo(_GroupInfo):
             if response.status_code == 200:
                 return response.json()["result"]
             else:
-                raise Exception("Error from server: %s", response.text)
+                raise Exception("Error from server: %s" % response.text)
         return wrapped
 
 
