@@ -13,11 +13,20 @@ logger = getLogger("logger")
 
 
 class Command(NamedTuple):
+    """各コマンドの情報を格納するクラス"""
     text: str
     description: str
     process: Callable[..., Any]
 
-# コマンドの文字列を格納するクラス
+
+class _ProgressStatus(NamedTuple):
+    GOOD: str = "🟢 : 順調です！"
+    BAD: str = "🟡 : 進捗ダメです！"
+    DONE: str = "🔵 : 終わりました！"
+    WAITING: str = "🔴 : 進捗報告待ち"
+
+
+ProgressStatus = _ProgressStatus()
 
 
 class CommandRegistry(type):
@@ -30,16 +39,6 @@ class CommandRegistry(type):
         # クラス定義時に見つかった Command だけで registry を初期化
         cls.registry = [v for v in ns.values() if isinstance(v, Command)]
         return cls
-
-
-class _ProgressStatus(NamedTuple):
-    GOOD: str = "🟢 : 順調です！"
-    BAD: str = "🟡 : 進捗ダメです！"
-    DONE: str = "🔵 : 終わりました！"
-    WAITING: str = "🔴 : 進捗報告待ち"
-
-
-ProgressStatus = _ProgressStatus()
 
 
 class ProgressButton(discord.ui.View):
@@ -67,7 +66,7 @@ class ProgressButton(discord.ui.View):
             return any(r.id == self.allow_role_id for r in user.roles)
         return False
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:  # pylint: disable=w0221
         if self._is_allowed(interaction.user):
             return True
         await interaction.response.send_message("あなたにはこの操作権限がありません。", ephemeral=True)
@@ -75,15 +74,15 @@ class ProgressButton(discord.ui.View):
 
     # ===== ボタンごとの処理 =====
     @discord.ui.button(label="順調です！", style=discord.ButtonStyle.primary)
-    async def good(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def good(self, interaction: discord.Interaction, button: discord.ui.Button):  # pylint: disable=unused-argument, missing-function-docstring
         await self.update_status(interaction, ProgressStatus.GOOD)
 
     @discord.ui.button(label="進捗ダメです！", style=discord.ButtonStyle.secondary)
-    async def bad(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def bad(self, interaction: discord.Interaction, button: discord.ui.Button):  # pylint: disable=unused-argument, missing-function-docstring
         await self.update_status(interaction, ProgressStatus.BAD)
 
     @discord.ui.button(label="終わりました！", style=discord.ButtonStyle.success)
-    async def done(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def done(self, interaction: discord.Interaction, button: discord.ui.Button):  # pylint: disable=unused-argument, missing-function-docstring
         await self.update_status(interaction, ProgressStatus.DONE)
 
     async def update_status(self, interaction: discord.Interaction, status: str):
@@ -126,11 +125,14 @@ class Commands(metaclass=CommandRegistry):
     def __init__(
         self,
         interaction: Optional[discord.Interaction] = None,
-        webhook: Optional[discord.Webhook] = None
+        webhook: Optional[discord.Webhook] = None,
+        bot: Optional[discord.Client] = None,
+        broadcast_webhook_msg: bool = False
     ):
         self.interaction = interaction
         self.webhook = webhook
-
+        self.bot = bot
+        self.broadcast_webhook_msg = broadcast_webhook_msg
     HELP = Command(
         text="help",
         description="ヘルプコマンド",
@@ -194,7 +196,7 @@ class Commands(metaclass=CommandRegistry):
             content: Optional[str] = None,
             embed: Optional[discord.Embed] = None,
             view: Optional[discord.ui.View] = None,
-            ephemeral: bool = False
+            ephemeral: bool = False,
     ):
         """interaction or webhook 経由で送信"""
         # Noneは許容されないため、Noneの値を除去
@@ -205,8 +207,37 @@ class Commands(metaclass=CommandRegistry):
             "ephemeral": ephemeral
         }
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
-        # 1️⃣ interaction がある場合
-        if self.interaction:
+
+        # broadcastの場合
+        if self.broadcast_webhook_msg:
+            if self.bot is None:
+                logger.error("you must provide bot instance when broadcast is True")
+                return
+            for guild in self.bot.guilds:  # 全てのサーバーに送信
+                for channel in guild.text_channels:  # 全てのテキストチャンネルに送信
+                    try:
+                        webhooks = await channel.webhooks()
+                        webhook_name = "amaoto_task_feed"
+                        webhook = discord.utils.get(webhooks, name=webhook_name)  # 既存のWebhookを取得
+                        if not webhook:
+                            continue
+                        await webhook.send(
+                            **kwargs,
+                            username="あまおとちゃん",
+                            avatar_url="https://raw.githubusercontent.com/tokuactclub/discord/refs/heads/main/image.png",
+                            wait=True
+                        )
+                    except Exception as e:  # pylint: disable=W0718
+                        logger.exception(
+                            "Failed to send broadcast message to guild %s channel %s: %s",
+                            guild.name,
+                            channel.name,
+                            e
+                        )
+                        continue
+
+        # interaction がある場合
+        elif self.interaction:
             if not self.interaction.response.is_done():
                 # 初回応答
                 return await self.interaction.response.send_message(
@@ -218,7 +249,7 @@ class Commands(metaclass=CommandRegistry):
                     **kwargs
                 )
 
-        # 2️⃣ webhook 経由の場合
+        # webhook 経由の場合
         elif self.webhook:
             return await self.webhook.send(
                 **kwargs,
@@ -310,7 +341,9 @@ class Commands(metaclass=CommandRegistry):
                     result_events.append(event)
             # botとして対応
             if len(result_events) == 0:
-                await self.send_message(messages.NONE_REMIND_TASK)
+                if self.interaction is not None or self.webhook is not None:
+                    # broadcastではない場合、リマインド対象が無いことを通知
+                    await self.send_message(messages.NONE_REMIND_TASK)
                 return
             else:
                 await self.send_message("リマインダーだよ！")
@@ -318,23 +351,49 @@ class Commands(metaclass=CommandRegistry):
             # メッセージを送信
             # UIの観点からWebhookでメッセージを送信
             # チャンネルにtask_feedという名前のwebhookを取得、なければ作成
-            if self.interaction is None:
-                logger.error("Interaction is None")
+            webhooks = []
+
+            if self.webhook is not None:  # self.webhookが提供されている場合ok
+                webhooks.append(self.webhook)
+            elif any([self.interaction, self.webhook, self.bot]) is False:
+                logger.error("Either interaction, webhook or bot must be provided for reminder command.")
                 return
-            # TODO: interactionに依存しない処理にかえないと、webhook経由での処理ができない
-            channel = self.interaction.channel
-            if channel is None or type(channel) is not discord.TextChannel:
-                logger.error("Channel is None or not TextChannel")
-                return
-            webhooks = await channel.webhooks()
-            webhook_name = "amaoto_task_feed"
-            webhook = discord.utils.get(webhooks, name=webhook_name)  # 既存のWebhookを取得
-            if webhook is None:  # なければ新規作成
-                webhook = await channel.create_webhook(name=webhook_name)
+            elif self.interaction is not None:
+                # interactionのみ提供されている場合、interactionのチャンネルからwebhookを取得or 作成
+                channel = self.interaction.channel
+                if channel is None or not isinstance(channel, discord.TextChannel):
+                    msg = "Error: Channel is None or not TextChannel"
+                    await self.send_message(msg)
+                    logger.error(msg)
+                    return
+
+                webhooks = await channel.webhooks()
+                webhook_name = "amaoto_task_feed"
+                webhook = discord.utils.get(webhooks, name=webhook_name)  # 既存のWebhookを取得
+                if webhook is None:  # なければ新規作成
+                    webhook = await channel.create_webhook(name=webhook_name)
+                webhooks.append(webhook)
+            elif self.bot is not None:
+                # botのみ提供されている場合、botの全サーバーの各チャンネルからwebhookを取得
+                for guild in self.bot.guilds:
+                    for channel in guild.text_channels:
+                        try:
+                            webhooks = await channel.webhooks()
+                            webhook_name = "amaoto_task_feed"
+                            webhook = discord.utils.get(webhooks, name=webhook_name)  # 既存のWebhookを取得
+                            if webhook is None:  # なければ無視
+                                continue
+                            webhooks.append(webhook)
+                        except Exception:  # pylint: disable=W0718
+                            continue
+                if len(webhooks) == 0:
+                    logger.error("Error: No webhooks found in any guilds.")
+                    return
 
             # 各イベントについてリマインドメッセージを送信
-            for event in result_events:
-                await self.send_single_remind_msg(event, webhook)
+            for webhook in webhooks:
+                for event in result_events:
+                    await self.send_single_remind_msg(event, webhook)
 
         except Exception as e:  # pylint: disable=W0718
             logger.exception(e)
