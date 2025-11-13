@@ -93,50 +93,6 @@ def react_message_webhook(request, botId, event_index):
     return
 
 
-def react_join_webhook(request, botId, event_index):
-    logger.info("got join webhook")
-    # リクエストボディーをJSONに変換
-    request_json = request.get_json()
-
-    bot = db_bot.get_row(botId)
-    channel_access_token = bot["channel_access_token"]
-    bot_name = bot["bot_name"]
-
-    if IS_DEBUG_MODE:
-        remaining_message_count = 200
-        event = request_json['events'][event_index]
-        group_id = event['source']['groupId']
-        logger.info(messages.JOIN.format(bot_name, remaining_message_count))
-    else:
-        # グループの人数を取得
-        line_bot_api = LineBotApi(channel_access_token)
-        event = request_json['events'][event_index]
-        group_id = event['source']['groupId']
-        group_member_count = line_bot_api.get_group_members_count(group_id)
-
-        # 残り送信可能なメッセージ数を取得
-        remaining_message_count = line_bot_api.get_message_quota().value
-
-        # 残り送信可能な回数を計算(小数点以下切り捨て)
-        remaining_message_count = remaining_message_count // group_member_count
-
-        line_bot_api.reply_message(
-            event['replyToken'],
-            TextSendMessage(text=messages.JOIN.format(bot_name, remaining_message_count))
-        )
-
-    # 参加したグループがリマインド対象のグループであればdatabaseを更新
-    # リマインド対象のグループIDを取得
-    TARGET_GROUP_ID = db_group.group_id()
-    logger.info(f"target group id: {TARGET_GROUP_ID}\n, group id: {group_id}")
-
-    # リマインド対象のグループIDと一致する場合
-    if group_id == TARGET_GROUP_ID:
-        # リマインド対象のグループに参加したことを記録
-        db_bot.update_value(botId, "in_group", True)
-    return
-
-
 def react_leave_webhook(request, botId, event_index):
     logger.info("got left webhook")
     # グループから抜けたことを記録

@@ -5,8 +5,6 @@ HELP = """コマンド一覧だよ！
 - !practice: その日部活があるか送るよ
 - !handover: 引き継ぎ資料のURLを送るよ"""
 
-CHANGE_GROUP = "リマインドするグループを変更したよ！"
-CHANGE_GROUP_ERROR = "グループ名の取得に失敗したよ！もう一度試してね！"
 PRACTICE = """今日の練習は{0}でします。
 時間は{1}〜{2}です！遅刻・欠席は連絡をお願いします！{3}"""
 NO_PRACTICE = "今日は練習はないよ！"
@@ -22,14 +20,12 @@ INSTAGRAM = """あまおとのInstagramだよ！
 https://www.instagram.com/tokuactclub/"""
 
 TWITTER = """あまおとのX(旧Twitter)だよ！
-https://twitter.com/tokuactclub/"""
+https://x.com/tokuactclub/"""
 
 HOMEPAGE = """あまおとのHPだよ！
 https://tokushimaactclub.web.fc2.com/"""
 
-JOIN = """{0}がグループに参加したよ！
-今月残り{1}回メッセージを送れるよ！
-返信はカウントされないから安心してね！"""
+JOIN = """こんにちは！あまおとちゃんだよ！"""
 
 CMD_ERROR = "コマンドが見つかりませんでした"
 
