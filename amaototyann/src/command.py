@@ -40,6 +40,7 @@ class CommandRegistry(type):
 
 async def _practice(interaction: discord.Interaction):
     try:
+        await interaction.response.defer(thinking=True)
         response = requests.post(
             GAS_URL,
             json={"cmd": "practice"},
@@ -62,9 +63,9 @@ async def _practice(interaction: discord.Interaction):
             ))
         logger.info("events: %s", events)
         if len(events) > 0:
-            await interaction.response.send_message("\n\n".join(events))
+            await interaction.followup.send("\n\n".join(events))
         else:
-            await interaction.response.send_message(messages.NO_PRACTICE)
+            await interaction.followup.send(messages.NO_PRACTICE)
     except Exception as e:
         logger.exception(e)
 
@@ -164,7 +165,7 @@ class ProgressButton(discord.ui.View):
         await interaction.response.defer()
 
 
-async def send_single_remind_msg(interaction, event: dict, webhook: discord.Webhook):
+async def send_single_remind_msg(event: dict, webhook: discord.Webhook):
     """単一のリマインドメッセージを送信する関数"""
     # embedメッセージの作成
     embed = discord.Embed(colour=0x00b0f4)
@@ -187,7 +188,8 @@ async def send_single_remind_msg(interaction, event: dict, webhook: discord.Webh
 
     # メッセージに対して進捗報告ボタンを追加
     # viewの初期化にmsg.idが必要なため、一旦送信後に編集
-    target_role = discord.utils.get(interaction.guild.roles, name="テスト") if interaction.guild else None
+
+    target_role = discord.utils.get(webhook.guild.roles, name="テスト") if webhook.guild else None
     view = ProgressButton(
         allow_role=target_role,
         webhook=webhook,
@@ -263,7 +265,7 @@ async def _reminder(interaction: discord.Interaction, day_left: Optional[str] = 
 
         # 各イベントについてリマインドメッセージを送信
         for event in result_events:
-            await send_single_remind_msg(interaction, event, webhook)
+            await send_single_remind_msg(event, webhook)
 
     except Exception as e:
         logger.exception(e)
@@ -283,19 +285,6 @@ async def _finish_event(interaction: discord.Interaction, event_id: str):
             await interaction.response.send_message("エラーで通知を終われなかったよ！ごめんね！")
     except Exception as e:
         logger.exception(e)
-
-
-def _send_bubble_message(self, bubble):
-    if IS_DEBUG_MODE:
-        logger.info("[DEBUG MODE] Bubble Message: %s", bubble)
-    elif self.is_webhook_request:
-        self.line_bot_api.reply_message(
-            self.reply_token, bubble
-        )
-    else:
-        self.line_bot_api.push_message(
-            self.TARGET_GROUP_ID, bubble
-        )
 
 
 def _calculate_date_difference(dt: datetime):
