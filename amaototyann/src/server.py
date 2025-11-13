@@ -1,19 +1,18 @@
 """LINE BotのWebhookを受け取るFlaskサーバー."""
 import os
-import time
-import threading
-import requests
+from typing import Callable, Any
 import discord
 from discord import app_commands
 
-from typing import Callable, Any
 from amaototyann.src.command import Commands as cmds
-from amaototyann.src import logger, db_bot, db_group, integrate_flask_logger
-from amaototyann.src import messages, logger, transcribeWebhook, IS_DEBUG_MODE, db_bot, db_group
+from amaototyann.src import messages, logger
 
 GAS_URL = os.getenv('GAS_URL')
 
 DISCORD_TOKEN = os.getenv('DISCORD_BOT_TOKEN')
+if DISCORD_TOKEN is None:
+    logger.error("DISCORD_BOT_TOKEN is not set")
+    exit(1)
 
 
 # def boot_server():

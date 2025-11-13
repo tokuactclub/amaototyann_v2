@@ -1,16 +1,10 @@
-from typing import Literal
 from logging import getLogger, config
 from datetime import datetime, timezone, timedelta
 import json
-from typing import NamedTuple
-from typing import Optional
-from linebot.models import TextSendMessage
+from typing import NamedTuple, Optional, Callable, Any
 import requests
-from typing import Callable, Any
-import asyncio
 import discord
-from amaototyann.src.bubble_msg import taskBubbleMsg
-from amaototyann.src import IS_DEBUG_MODE, GAS_URL, messages, db_bot, db_group
+from amaototyann.src import GAS_URL, messages
 
 # loggerの設定
 with open("amaototyann/src/log_config.json", "r", encoding="utf-8") as f:
