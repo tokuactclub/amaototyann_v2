@@ -5,7 +5,7 @@ import json
 import os
 from logging import getLogger, config
 import requests
-import pandas as pd
+# import pandas as pd
 
 # logs/app.logのフォルダ・ファイルが存在しない場合は作成
 if not os.path.exists("amaototyann/logs"):
@@ -46,112 +46,112 @@ if not GAS_URL:
     raise EnvironmentError("GAS_URL is not set")
 
 
-class _BotInfo:
-    def __init__(self):
-        self._database = pd.DataFrame(columns=['id', 'bot_name', 'channel_access_token', 'channel_secret', 'gpt_webhook_url', 'in_group'])
-        self._is_updated = False
-        self.init_database_from_gas()
+# class _BotInfo:
+#     def __init__(self):
+#         self._database = pd.DataFrame(columns=['id', 'bot_name', 'channel_access_token', 'channel_secret', 'gpt_webhook_url', 'in_group'])
+#         self._is_updated = False
+#         self.init_database_from_gas()
 
-    def init_database_from_gas(self):
-        """Update all bot info from GAS and update the in-memory database."""
-        BOT_INFOS = requests.post(
-            GAS_URL,
-            json={"cmd": "getBotInfo"},
-            timeout=60
-        ).json()
+#     def init_database_from_gas(self):
+#         """Update all bot info from GAS and update the in-memory database."""
+#         BOT_INFOS = requests.post(
+#             GAS_URL,
+#             json={"cmd": "getBotInfo"},
+#             timeout=60
+#         ).json()
 
-        # Clear the existing database
-        self._database = pd.DataFrame(columns=['id', 'bot_name', 'channel_access_token', 'channel_secret', 'gpt_webhook_url', 'in_group'])
+#         # Clear the existing database
+#         self._database = pd.DataFrame(columns=['id', 'bot_name', 'channel_access_token', 'channel_secret', 'gpt_webhook_url', 'in_group'])
 
-        # Populate the database with new data
-        for bot_info in BOT_INFOS:
-            new_entry = pd.DataFrame([{
-                'id': bot_info[0],
-                'bot_name': bot_info[1],
-                'channel_access_token': bot_info[2],
-                'channel_secret': bot_info[3],
-                'gpt_webhook_url': bot_info[4],
-                'in_group': bot_info[5]
-            }])
-            self._database = pd.concat([self._database, new_entry], ignore_index=True)
+#         # Populate the database with new data
+#         for bot_info in BOT_INFOS:
+#             new_entry = pd.DataFrame([{
+#                 'id': bot_info[0],
+#                 'bot_name': bot_info[1],
+#                 'channel_access_token': bot_info[2],
+#                 'channel_secret': bot_info[3],
+#                 'gpt_webhook_url': bot_info[4],
+#                 'in_group': bot_info[5]
+#             }])
+#             self._database = pd.concat([self._database, new_entry], ignore_index=True)
 
-    def add_row(self, bot_id: int, bot_name: str, channel_access_token: str, channel_secret: str, gpt_webhook_url: str, in_group: bool):
-        if not all([bot_id, bot_name, channel_access_token, channel_secret, gpt_webhook_url, in_group]):
-            raise ValueError('All fields are required')
-        if bot_id in self._database['id'].values:
-            raise ValueError('ID already exists')
-        self._is_updated = True
-        new_entry = pd.DataFrame([{
-            'id': bot_id,
-            'bot_name': bot_name,
-            'channel_access_token': channel_access_token,
-            'channel_secret': channel_secret,
-            'gpt_webhook_url': gpt_webhook_url,
-            'in_group': in_group
-        }])
-        self._database = pd.concat([self._database, new_entry], ignore_index=True)
+#     def add_row(self, bot_id: int, bot_name: str, channel_access_token: str, channel_secret: str, gpt_webhook_url: str, in_group: bool):
+#         if not all([bot_id, bot_name, channel_access_token, channel_secret, gpt_webhook_url, in_group]):
+#             raise ValueError('All fields are required')
+#         if bot_id in self._database['id'].values:
+#             raise ValueError('ID already exists')
+#         self._is_updated = True
+#         new_entry = pd.DataFrame([{
+#             'id': bot_id,
+#             'bot_name': bot_name,
+#             'channel_access_token': channel_access_token,
+#             'channel_secret': channel_secret,
+#             'gpt_webhook_url': gpt_webhook_url,
+#             'in_group': in_group
+#         }])
+#         self._database = pd.concat([self._database, new_entry], ignore_index=True)
 
-    def get_row(self, bot_id: int):
-        """get bot info by id """
-        entry = self._database[self._database['id'] == bot_id]
-        if entry.empty:
-            raise ValueError(f'ID not found, id: {bot_id}')
-        return entry.iloc[0].to_dict()
+#     def get_row(self, bot_id: int):
+#         """get bot info by id """
+#         entry = self._database[self._database['id'] == bot_id]
+#         if entry.empty:
+#             raise ValueError(f'ID not found, id: {bot_id}')
+#         return entry.iloc[0].to_dict()
 
-    def delete_row(self, bot_id: int):
-        """delete bot info by id"""
-        assert isinstance(bot_id, int), 'ID must be an integer'
-        self._is_updated = True
+#     def delete_row(self, bot_id: int):
+#         """delete bot info by id"""
+#         assert isinstance(bot_id, int), 'ID must be an integer'
+#         self._is_updated = True
 
-        if bot_id in self._database['id'].values:
-            self._database = self._database[self._database['id'] != bot_id].reset_index(drop=True)
-        else:
-            raise ValueError('ID not found')
+#         if bot_id in self._database['id'].values:
+#             self._database = self._database[self._database['id'] != bot_id].reset_index(drop=True)
+#         else:
+#             raise ValueError('ID not found')
 
-    def list_rows(self):
-        return self._database.to_dict(orient='records')
+#     def list_rows(self):
+#         return self._database.to_dict(orient='records')
 
-    def update_value(self, bot_id: int, column: str, value):
-        assert isinstance(bot_id, int), 'ID must be an integer'
-        self._is_updated = True
-        if bot_id not in self._database['id'].values:
-            raise ValueError('ID not found')
-        if column not in self._database.columns:
-            raise ValueError('Column not found')
-        if column == 'in_group' and not isinstance(value, bool):
-            value = True if str(value).lower() == 'true' else False
-        logger.info("Updating %s for ID %s to %s", column, bot_id, value)
-        self._database.loc[self._database['id'] == bot_id, column] = value
+#     def update_value(self, bot_id: int, column: str, value):
+#         assert isinstance(bot_id, int), 'ID must be an integer'
+#         self._is_updated = True
+#         if bot_id not in self._database['id'].values:
+#             raise ValueError('ID not found')
+#         if column not in self._database.columns:
+#             raise ValueError('Column not found')
+#         if column == 'in_group' and not isinstance(value, bool):
+#             value = True if str(value).lower() == 'true' else False
+#         logger.info("Updating %s for ID %s to %s", column, bot_id, value)
+#         self._database.loc[self._database['id'] == bot_id, column] = value
 
-    def backup_to_gas(self):
-        """Backup the current database to GAS."""
-        if not self._is_updated:
-            return "not need to backup", 200
+#     def backup_to_gas(self):
+#         """Backup the current database to GAS."""
+#         if not self._is_updated:
+#             return "not need to backup", 200
 
-        # Convert the database to a list for GAS
-        db = self.list_rows()
-        if db is None:
-            logger.error("database is None")
-            return "error", 500
+#         # Convert the database to a list for GAS
+#         db = self.list_rows()
+#         if db is None:
+#             logger.error("database is None")
+#             return "error", 500
 
-        db = list(map(lambda x: [x["id"], x["bot_name"], x["channel_access_token"], x["channel_secret"], x["gpt_webhook_url"], x["in_group"]], db))
+#         db = list(map(lambda x: [x["id"], x["bot_name"], x["channel_access_token"], x["channel_secret"], x["gpt_webhook_url"], x["in_group"]], db))
 
-        # Send the database to GAS
-        if IS_DEBUG_MODE:
-            return "didn't backup due to debug mode", 200
-        response = requests.post(
-            GAS_URL,
-            json={"cmd": "setBotInfo", "options": {"bot_info": db}},
-            timeout=60
-        )
+#         # Send the database to GAS
+#         if IS_DEBUG_MODE:
+#             return "didn't backup due to debug mode", 200
+#         response = requests.post(
+#             GAS_URL,
+#             json={"cmd": "setBotInfo", "options": {"bot_info": db}},
+#             timeout=60
+#         )
 
-        if response.text == "success":
-            logger.info("bot info backup success")
-            self._is_updated = False
-            return "success", 200
-        else:
-            logger.error("bot info backup error")
-            return "error", 500
+#         if response.text == "success":
+#             logger.info("bot info backup success")
+#             self._is_updated = False
+#             return "success", 200
+#         else:
+#             logger.error("bot infos backup error")
+#             return "error", 500
 
 
 class _GroupInfo:
@@ -218,24 +218,24 @@ class _GroupInfo:
             return "error", 500
 
 
-class BotInfo(_BotInfo):
+# class BotInfo(_BotInfo):
 
-    def __init__(self):
-        pass
+#     def __init__(self):
+#         pass
 
-    def __getattribute__(self, name):
-        def wrapped(*args, **kwargs):
-            url = os.path.join(DATABASE_URL, "bot", name + "/")
-            response = requests.post(url, json={
-                'args': args,
-                'kwargs': kwargs
-            }, timeout=60)
-            if response.status_code == 200:
-                return response.json()["result"]
-            else:
-                logger.error("Error from server: %s", response.text)
-                raise Exception("Error from server: %s" % response.text)
-        return wrapped
+#     def __getattribute__(self, name):
+#         def wrapped(*args, **kwargs):
+#             url = os.path.join(DATABASE_URL, "bot", name + "/")
+#             response = requests.post(url, json={
+#                 'args': args,
+#                 'kwargs': kwargs
+#             }, timeout=60)
+#             if response.status_code == 200:
+#                 return response.json()["result"]
+#             else:
+#                 logger.error("Error from server: %s", response.text)
+#                 raise Exception("Error from server: %s" % response.text)
+#         return wrapped
 
 
 class GroupInfo(_GroupInfo):
@@ -302,5 +302,5 @@ def transcribeWebhook(request, url, body=None):
         return 'Failed to forward data', 500
 
 
-db_bot = BotInfo()
+# db_bot = BotInfo()
 db_group = GroupInfo()

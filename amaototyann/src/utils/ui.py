@@ -4,6 +4,8 @@
 import dataclasses
 import discord
 
+from typing import Union
+
 
 @dataclasses.dataclass
 class ProgressStatus:
@@ -19,10 +21,10 @@ class ProgressButton(discord.ui.View):
 
     def __init__(
         self,
-        allow_user: discord.User | None = None,
-        allow_role: discord.Role | None = None,
-        webhook: discord.Webhook | None = None,
-        message_id: int | None = None,
+        allow_user: Union[discord.User, None] = None,
+        allow_role: Union[discord.Role, None] = None,
+        webhook: Union[discord.Webhook, None] = None,
+        message_id: Union[int, None] = None,
     ):
         super().__init__(timeout=None)
         self.allow_user_id = allow_user.id if allow_user else None
@@ -32,7 +34,7 @@ class ProgressButton(discord.ui.View):
         self.message_id = message_id
 
     # コメント: 押したユーザーが許可されているか確認
-    def _is_allowed(self, user: discord.Member | discord.User) -> bool:
+    def _is_allowed(self, user: Union[discord.Member, discord.User]) -> bool:
         if self.allow_user_id and user.id == self.allow_user_id:
             return True
         if self.allow_role_id and isinstance(user, discord.Member):
