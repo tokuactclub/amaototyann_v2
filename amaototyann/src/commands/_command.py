@@ -131,7 +131,7 @@ class Commands(MessageSender, metaclass=CommandRegistry):
             webhook = response.webhook
             msg = response.msg
 
-            target_role = discord.utils.get(webhook.guild.roles, name="テスト") if webhook.guild else None
+            target_role = discord.utils.get(webhook.guild.roles, name=event["job"]) if webhook.guild else None
             view = ProgressButton(
                 allow_role=target_role,
                 webhook=webhook,

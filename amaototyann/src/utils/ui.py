@@ -39,6 +39,8 @@ class ProgressButton(discord.ui.View):
             return True
         if self.allow_role_id and isinstance(user, discord.Member):
             return any(r.id == self.allow_role_id for r in user.roles)
+        if not self.allow_user_id and not self.allow_role_id: # どちらも指定されていない場合は全員許可
+            return True
         return False
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:  # pylint: disable=w0221
