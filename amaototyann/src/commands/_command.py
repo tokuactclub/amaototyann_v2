@@ -112,9 +112,11 @@ class Commands(MessageSender, metaclass=CommandRegistry):
         res = await self.send_message(
             embed=embed,
             force_sendWithWebhook=True,
-            target_webhooks_on_broadcast=target_webhooks
+            target_webhooks_on_broadcast=target_webhooks,
+            wait=True,
+            username="あまおとちゃん",
+            avatar_url="https://github.com/tokuactclub/discord/blob/main/image.png?raw=true"
         )
-
         if isinstance(res, discord.WebhookMessage):
             responses = [WebhookResponse(webhook=self.webhook, msg=res)]  # type: ignore
         elif isinstance(res, list) and all(isinstance(r, WebhookResponse) for r in res):
@@ -159,7 +161,7 @@ class Commands(MessageSender, metaclass=CommandRegistry):
                 # リマインド（締切）としては23:59:59を意図しているため、約一日ずらす
 
                 # event["date"]をdatetime型に変換し、1日加算
-                event["date"] = datetime.fromisoformat(event["date"])
+                event["date"] = datetime.fromisoformat(event["date"].replace("Z", "+00:00"))
                 event["date"] = event["date"] + timedelta(days=1) - timedelta(seconds=1)
 
                 # 日時の差分を計算
