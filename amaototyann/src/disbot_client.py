@@ -1,8 +1,12 @@
 """LINE BotのWebhookを受け取るFlaskサーバー."""
 import os
 from typing import Callable, Any
+from datetime import datetime, timezone, timedelta
+import threading
+import time
+import asyncio
+import schedule
 import discord
-from discord import app_commands
 
 from amaototyann.src.commands._command import Commands
 from amaototyann.src import messages, logger
@@ -20,7 +24,7 @@ intents.message_content = True  # メッセージ内容の受信を有効化
 intents.messages = True  # メッセージの受信を有効化
 
 client = discord.Client(intents=intents)
-tree = app_commands.CommandTree(client)
+tree = discord.app_commands.CommandTree(client)
 
 
 @client.event
@@ -40,8 +44,6 @@ async def on_message(message):
     if message.author.bot:
         return
     # logger.info("Received message: %s from %s", message.content, message.author)
-
-    await Commands(bot=client, broadcast_webhook_msg=True)._reminder()
 
 
 @client.event
@@ -63,18 +65,64 @@ async def on_ready():
         return _cmd
     for cmd in Commands.registry:
         tree.add_command(
-            app_commands.Command(
+            discord.app_commands.Command(
                 name=cmd.text,
                 description=cmd.description,
                 callback=make_cmd(cmd.process)
             )
         )
+    # スケジュールを起動
+    start_scheduler_from_bot_loop()
 
     # スラッシュコマンドを同期
     # コマンドの種類が増えた場合などに必要
     # 単にコマンドの挙動を変えただけの場合は不要
     # レート制限があるため、頻繁に実行しないこと
     # await tree.sync()
+
+
+async def practice_command():
+    await Commands(bot=client, broadcast_webhook_msg=True).practice()
+
+
+async def reminder_command():
+    await Commands(bot=client, broadcast_webhook_msg=True).reminder()
+
+
+def schedule_task(loop: asyncio.AbstractEventLoop):
+    """スケジュール設定."""
+    jst = timezone(timedelta(hours=9))
+    now = datetime.now(jst)
+    logger.info("Scheduler started at %s", now)
+
+    # コメント: 既存のイベントループ上でコマンドを実行するラッパー
+    def run_practice():
+        asyncio.run_coroutine_threadsafe(practice_command(), loop)
+
+    def run_reminder():
+        asyncio.run_coroutine_threadsafe(reminder_command(), loop)
+
+    # JST 8時のタスクをスケジュール
+    schedule.every().day.at("08:00").do(run_practice)
+
+    # JST 20時のタスクをスケジュール
+    schedule.every().day.at("20:00").do(run_reminder)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+
+# コメント: 実際には「bot が起動し、イベントループが動いているスレッド」で loop を取る
+# 例: on_ready などから呼ぶ
+def start_scheduler_from_bot_loop():
+    loop = asyncio.get_running_loop()  # bot.run(...) の中ならこれで取得できる
+    scheduler_thread = threading.Thread(
+        target=schedule_task,
+        args=(loop,),
+        daemon=True,
+    )
+    scheduler_thread.start()
 
 
 client.run(DISCORD_TOKEN)

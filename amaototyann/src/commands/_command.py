@@ -47,12 +47,12 @@ class Commands(MessageSender, metaclass=CommandRegistry):
     REMINDER = Command(
         text="reminder",
         description="リマインダーを送信するコマンド",
-        process=lambda self: self._reminder()  # pylint: disable=W0212
+        process=lambda self: self.reminder()  # pylint: disable=W0212
     )
     PRACTICE = Command(
         text="practice",
         description="練習があるか送信するコマンド。事前にGASで練習予定を登録しておく必要がある。",
-        process=lambda self: self._practice()  # pylint: disable=W0212
+        process=lambda self: self.practice()  # pylint: disable=W0212
     )
     PLACE = Command(
         text="place",
@@ -138,7 +138,7 @@ class Commands(MessageSender, metaclass=CommandRegistry):
 
             await webhook.edit_message(msg.id, embed=embed, view=view)
 
-    async def _reminder(self, day_left: Optional[str] = None):
+    async def reminder(self, day_left: Optional[str] = None):
 
         try:
             await self.defer_response(ephemeral=True)
@@ -237,7 +237,7 @@ class Commands(MessageSender, metaclass=CommandRegistry):
 
         return day_difference
 
-    async def _practice(self):
+    async def practice(self):
         try:
 
             await self.defer_response()
@@ -264,7 +264,7 @@ class Commands(MessageSender, metaclass=CommandRegistry):
             logger.info("events: %s", events)
             if len(events) > 0:
                 await self.send_message("\n\n".join(events))
-            else:
+            elif not self.broadcast_webhook_msg:  # slashコマンドの場合
                 await self.send_message(messages.NO_PRACTICE)
         except Exception as e:  # pylint: disable=W0718
             logger.exception(e)
