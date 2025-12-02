@@ -41,23 +41,22 @@ class Commands(MessageSender, metaclass=CommandRegistry):
     HELP = Command(
         text="help",
         description="ヘルプコマンド",
-        process=lambda self: self.send_message(messages.HELP)
-
+        process=lambda self: self._help()  # pylint: disable=W0212
     )
 
     REMINDER = Command(
         text="reminder",
-        description="リマインダーコマンド",
+        description="リマインダーを送信するコマンド",
         process=lambda self: self._reminder()  # pylint: disable=W0212
     )
     PRACTICE = Command(
         text="practice",
-        description="練習コマンド",
+        description="練習があるか送信するコマンド。事前にGASで練習予定を登録しておく必要がある。",
         process=lambda self: self._practice()  # pylint: disable=W0212
     )
     PLACE = Command(
         text="place",
-        description="場所コマンド",
+        description="場所を送信するコマンド（未実装）",
         process=lambda self: self._place()  # pylint: disable=W0212
     )
     HANDOVER = Command(
@@ -275,6 +274,12 @@ class Commands(MessageSender, metaclass=CommandRegistry):
         # 実装するには、練習日以外の活動場所を記録するシステムの構築が必要
         # 作成する場合はヘルプコマンドも修正すること
         await self.send_message(messages.PLACE)
+
+    async def _help(self):
+        text = "利用可能なコマンド一覧だよ！\n"
+        for cmd in Commands.registry:
+            text += f"`/{cmd.text}` : {cmd.description}\n"
+        await self.send_message(text)
 
 
 if __name__ == "__main__":
