@@ -7,7 +7,7 @@ import requests
 from flask import Flask, request
 from amaototyann.src.database import db_bot, db_group
 from amaototyann.src import integrate_flask_logger, logger
-from amaototyann.src.command import Commands
+from amaototyann.src.commands._command import Commands
 
 GAS_URL = os.getenv('GAS_URL')
 

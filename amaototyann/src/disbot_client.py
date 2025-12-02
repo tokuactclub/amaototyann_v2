@@ -4,7 +4,7 @@ from typing import Callable, Any
 import discord
 from discord import app_commands
 
-from amaototyann.src.command import Commands
+from amaototyann.src.commands._command import Commands
 from amaototyann.src import messages, logger
 
 GAS_URL = os.getenv('GAS_URL')
