@@ -3,3 +3,4 @@
 __pycache__/
 test.py
 amaototyann/logs/app.log
+.DS_Store
