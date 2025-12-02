@@ -224,7 +224,7 @@ class Commands(metaclass=CommandRegistry):
                         await webhook.send(
                             **kwargs,
                             username="あまおとちゃん",
-                            avatar_url="https://raw.githubusercontent.com/tokuactclub/discord/refs/heads/main/image.png",
+                            avatar_url="./images/icon.png",
                             wait=True
                         )
                     except Exception as e:  # pylint: disable=W0718
