@@ -201,11 +201,14 @@ class Commands(metaclass=CommandRegistry):
             webhooks = await self._get_broadcast_targets_webhooks()
         for webhook in webhooks:
             try:
+                default_kwargs = {
+                    "username": "あまおとちゃん",
+                    "avatar_url": "https://github.com/tokuactclub/discord/blob/main/image.png?raw=true",
+                    "wait": True
+                }
+                default_kwargs.update(kwargs)
                 msg = await webhook.send(
-                    **kwargs,
-                    username="あまおとちゃん",
-                    avatar_url="https://github.com/tokuactclub/discord/blob/main/image.png?raw=true",
-                    wait=True
+                    **default_kwargs
                 )
                 result.append(WebhookResponse(webhook=webhook, msg=msg))
             except Exception as e:  # pylint: disable=W0718
