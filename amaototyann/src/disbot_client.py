@@ -41,6 +41,8 @@ async def on_message(message):
         return
     # logger.info("Received message: %s from %s", message.content, message.author)
 
+    await Commands(bot=client, broadcast_webhook_msg=True)._reminder()
+
 
 @client.event
 async def on_ready():

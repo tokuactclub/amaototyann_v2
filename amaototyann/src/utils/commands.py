@@ -1,5 +1,8 @@
 """commandでのユーティリティを定義するモジュール"""
+import dataclasses
 from typing import NamedTuple, Callable, Any
+from discord.webhook.async_ import WebhookMessage
+from discord import Webhook
 
 
 class Command(NamedTuple):
@@ -19,3 +22,13 @@ class CommandRegistry(type):
         # クラス定義時に見つかった Command だけで registry を初期化
         cls.registry = [v for v in ns.values() if isinstance(v, Command)]
         return cls
+
+
+@dataclasses.dataclass
+class WebhookResponse:
+    """Broadcastコマンドのレスポンスを格納するクラス"""
+    webhook: Webhook
+    msg: WebhookMessage
+
+
+BroadcastResponse = list[WebhookResponse]

@@ -6,7 +6,7 @@ import requests
 import discord
 from amaototyann.src import GAS_URL, messages
 from amaototyann.src.utils.ui import ProgressButton, ProgressStatus
-from amaototyann.src.utils.commands import Command, CommandRegistry
+from amaototyann.src.utils.commands import Command, CommandRegistry, BroadcastResponse, WebhookResponse
 
 # loggerの設定
 with open("amaototyann/src/log_config.json", "r", encoding="utf-8") as f:
@@ -24,6 +24,14 @@ class Commands(metaclass=CommandRegistry):
         bot: Optional[discord.Client] = None,
         broadcast_webhook_msg: bool = False
     ):
+        """_summary_
+
+        Args:
+            interaction (Optional[discord.Interaction], optional): discordのメッセージイベントで取得されるinteraction. Defaults to None.
+            webhook (Optional[discord.Webhook], optional): discordのWebhookオブジェクト. Defaults to None.
+            bot (Optional[discord.Client], optional): discord botのクライアントオブジェクト. Defaults to None.
+            broadcast_webhook_msg (bool, optional): メッセージを全サーバーに送信する。`bot`が必要. Defaults to False.
+        """
         self.interaction = interaction
         self.webhook = webhook
         self.bot = bot
@@ -92,72 +100,130 @@ class Commands(metaclass=CommandRegistry):
             embed: Optional[discord.Embed] = None,
             view: Optional[discord.ui.View] = None,
             ephemeral: bool = False,
+            force_sendWithWebhook: bool = False,
+            target_webhooks_on_broadcast: Optional[list[discord.Webhook]] = None,
+            **kwargs,  # Additional arguments for discord.Messageable.send
     ):
-        """interaction or webhook 経由で送信"""
-        # Noneは許容されないため、Noneの値を除去
-        kwargs = {
+        """interaction or webhook 経由で送信
+        Args:
+            content (Optional[str], optional): メッセージ内容. Defaults to None.
+            embed (Optional[discord.Embed], optional): 埋め込みメッセージ. Defaults to None.
+            view (Optional[discord.ui.View], optional): メッセージのView. Defaults to None.
+            ephemeral (bool, optional): ephemeralメッセージにするかどうか. Defaults to False.
+            force_sendWithWebhook (bool, optional): webhook経由で送信するかどうか. Defaults to False.
+            target_webhooks_on_broadcast (Optional[list[discord.Webhook]], optional): broadcast時の送信先Webhookリスト. Defaults to None.
+        Raises:
+            ValueError: interactionもwebhookも提供されなかった場合に発生
+        Returns:
+            discord.Message | discord.WebhookMessage | BroadcastResponse: 送信されたメッセージオブジェクト
+        """
+        assert self.interaction is not None or self.webhook is not None or self.broadcast_webhook_msg, \
+            "Either interaction or webhook must be provided."
+
+        kwargs.update({
             "content": content,
             "embed": embed,
             "view": view,
             "ephemeral": ephemeral
-        }
+        })
+        # Noneは許容されないため、Noneの値を除去
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
-        # broadcastの場合
-        if self.broadcast_webhook_msg:
-            if self.bot is None:
-                logger.error("you must provide bot instance when broadcast is True")
+        # force_sendWithWebhookの場合、webhookを作成しておく
+        # slashコマンドの場合のwebhook取得・作成処理
+        if force_sendWithWebhook and self.webhook is None and not self.broadcast_webhook_msg:
+            # interactionのみ提供されている場合、interactionのチャンネルからwebhookを取得or 作成
+            assert self.interaction is not None, \
+                "interaction must be provided when force_sendWithWebhook is True and webhook is None."
+            channel = self.interaction.channel
+            if channel is None or not isinstance(channel, discord.TextChannel):
+                msg = "Error: Channel is None or not TextChannel"
+                await self.send_message(msg)
+                logger.error(msg)
                 return
-            for guild in self.bot.guilds:  # 全てのサーバーに送信
-                for channel in guild.text_channels:  # 全てのテキストチャンネルに送信
-                    try:
-                        webhooks = await channel.webhooks()
-                        webhook_name = "amaoto_task_feed"
-                        webhook = discord.utils.get(webhooks, name=webhook_name)  # 既存のWebhookを取得
-                        if not webhook:
-                            continue
-                        await webhook.send(
-                            **kwargs,
-                            username="あまおとちゃん",
-                            avatar_url="./images/icon.png",
-                            wait=True
-                        )
-                    except Exception as e:  # pylint: disable=W0718
-                        logger.exception(
-                            "Failed to send broadcast message to guild %s channel %s: %s",
-                            guild.name,
-                            channel.name,
-                            e
-                        )
-                        continue
 
-        # interaction がある場合
-        elif self.interaction:
-            if not self.interaction.response.is_done():
-                # 初回応答
-                return await self.interaction.response.send_message(
-                    **kwargs
-                )
-            else:
-                # 2回目以降
-                return await self.interaction.followup.send(
-                    **kwargs
-                )
+            webhooks = await channel.webhooks()
+            webhook_name = "amaoto_task_feed"  # TODO: 定数化
+            webhook = discord.utils.get(webhooks, name=webhook_name)  # 既存のWebhookを取得
+            if webhook is None:  # なければ新規作成
+                webhook = await channel.create_webhook(name=webhook_name)
+            self.webhook = webhook
 
+        _inter = self.interaction
+        # broadcastの場合. 内部的にWebhook送信であるため、force_sendWithWebhookは無視される
+        if self.broadcast_webhook_msg:
+            return await self._broadcast_message(**kwargs, webhooks=target_webhooks_on_broadcast)
+        elif force_sendWithWebhook:
+            return await self.webhook.send(**kwargs)  # type:ignore
+        # interaction がある場合--初回応答
+        elif _inter is not None and _inter.response.is_done() is False:
+            return await _inter.response.send_message(**kwargs)
+        # interaction がある場合--2回目以降の応答
+        elif _inter is not None:
+            return await _inter.followup.send(**kwargs)
         # webhook 経由の場合
         elif self.webhook:
-            return await self.webhook.send(
-                **kwargs,
-            )
+            return await self.webhook.send(**kwargs)
         else:
             raise ValueError("Either interaction or webhook must be provided.")
+
+    async def _get_broadcast_targets_webhooks(self):
+        """broadcastの送信先Webhookを取得する関数"""
+        assert self.bot is not None, "bot must be provided to use broadcast_message"
+        webhooks: list[discord.Webhook] = []
+        for guild in self.bot.guilds:  # 全てのサーバーに送信
+            for channel in guild.text_channels:  # 全てのテキストチャンネルに送信
+                try:
+                    channel_webhooks = await channel.webhooks()
+                    webhook_name = "amaoto_task_feed"
+                    webhook = discord.utils.get(channel_webhooks, name=webhook_name)  # 既存のWebhookを取得
+                    if webhook:
+                        webhooks.append(webhook)
+                except Exception as e:  # pylint: disable=W0718
+                    logger.exception(
+                        "Failed to get webhook for guild %s channel %s: %s",
+                        guild.name if guild else "Unknown",
+                        channel.name if channel else "Unknown",
+                        e
+                    )
+                    continue
+        return webhooks
+
+    async def _broadcast_message(
+            self,
+            webhooks: Optional[list[discord.Webhook]] = None,
+            **kwargs,
+    ):
+        assert self.broadcast_webhook_msg, "broadcast_webhook_msg must be True to use broadcast_message"
+        assert self.bot is not None, "bot must be provided to use broadcast_message"
+        result: BroadcastResponse = []
+        if webhooks is None:
+            webhooks = await self._get_broadcast_targets_webhooks()
+        for webhook in webhooks:
+            try:
+                msg = await webhook.send(
+                    **kwargs,
+                    username="あまおとちゃん",
+                    avatar_url="https://github.com/tokuactclub/discord/blob/main/image.png?raw=true",
+                    wait=True
+                )
+                result.append(WebhookResponse(webhook=webhook, msg=msg))
+            except Exception as e:  # pylint: disable=W0718
+                logger.exception(
+                    "Failed to send broadcast message to guild %s channel %s: %s",
+                    webhook.guild.name if webhook.guild else "Unknown",
+                    webhook.channel.name if webhook.channel else "Unknown",
+                    e
+                )
+                continue
+        return result
 
     async def defer_response(self, ephemeral: bool = False):
         """interactionの応答を保留する関数"""
         if self.interaction:
             await self.interaction.response.defer(thinking=True, ephemeral=ephemeral)
 
-    async def send_single_remind_msg(self, event: dict, webhook: discord.Webhook):
+    async def send_single_remind_msg(self, event: dict, target_webhooks: Optional[list[discord.Webhook]]):
         """単一のリマインドメッセージを送信する関数"""
         # embedメッセージの作成
         embed = discord.Embed(colour=0x00b0f4)
@@ -171,24 +237,34 @@ class Commands(metaclass=CommandRegistry):
         )
 
         # Webhookでメッセージを送信
-        msg = await webhook.send(
+        res = await self.send_message(
             embed=embed,
-            username="あまおとちゃん",
-            avatar_url="https://raw.githubusercontent.com/tokuactclub/discord/refs/heads/main/image.png",
-            wait=True
+            force_sendWithWebhook=True,
+            target_webhooks_on_broadcast=target_webhooks
         )
+
+        if isinstance(res, discord.WebhookMessage):
+            responses = [WebhookResponse(webhook=self.webhook, msg=res)]  # type: ignore
+        elif isinstance(res, list) and all(isinstance(r, WebhookResponse) for r in res):
+            responses = res
+        else:
+            logger.error("Unexpected response type: %s", type(res))
+            return
 
         # メッセージに対して進捗報告ボタンを追加
         # viewの初期化にmsg.idが必要なため、一旦送信後に編集
+        for response in responses:
+            webhook = response.webhook
+            msg = response.msg
 
-        target_role = discord.utils.get(webhook.guild.roles, name="テスト") if webhook.guild else None
-        view = ProgressButton(
-            allow_role=target_role,
-            webhook=webhook,
-            message_id=msg.id
-        )
+            target_role = discord.utils.get(webhook.guild.roles, name="テスト") if webhook.guild else None
+            view = ProgressButton(
+                allow_role=target_role,
+                webhook=webhook,
+                message_id=msg.id
+            )
 
-        await webhook.edit_message(msg.id, embed=embed, view=view)
+            await webhook.edit_message(msg.id, embed=embed, view=view)
 
     async def _reminder(self, day_left: Optional[str] = None):
 
@@ -234,61 +310,21 @@ class Commands(metaclass=CommandRegistry):
 
                     event["last_days"] = day_difference
                     result_events.append(event)
+
             # botとして対応
-            if len(result_events) == 0:
-                if self.interaction is not None or self.webhook is not None:
-                    # broadcastではない場合、リマインド対象が無いことを通知
-                    await self.send_message(messages.NONE_REMIND_TASK)
-                return
+            if len(result_events) == 0 and self.broadcast_webhook_msg:
+                return  # broadcastの場合は何もしない
+            elif len(result_events) == 0:
+                # slashコマンドの場合は応答を返す
+                return await self.send_message(messages.NONE_REMIND_TASK)
             else:
-                await self.send_message("リマインダーだよ！")
+                await self.send_message("リマインダーだよ！")  # 初回応答
 
             # メッセージを送信
             # UIの観点からWebhookでメッセージを送信
-            # チャンネルにtask_feedという名前のwebhookを取得、なければ作成
-            webhooks = []
-
-            if self.webhook is not None:  # self.webhookが提供されている場合ok
-                webhooks.append(self.webhook)
-            elif any([self.interaction, self.webhook, self.bot]) is False:
-                logger.error("Either interaction, webhook or bot must be provided for reminder command.")
-                return
-            elif self.interaction is not None:
-                # interactionのみ提供されている場合、interactionのチャンネルからwebhookを取得or 作成
-                channel = self.interaction.channel
-                if channel is None or not isinstance(channel, discord.TextChannel):
-                    msg = "Error: Channel is None or not TextChannel"
-                    await self.send_message(msg)
-                    logger.error(msg)
-                    return
-
-                webhooks = await channel.webhooks()
-                webhook_name = "amaoto_task_feed"
-                webhook = discord.utils.get(webhooks, name=webhook_name)  # 既存のWebhookを取得
-                if webhook is None:  # なければ新規作成
-                    webhook = await channel.create_webhook(name=webhook_name)
-                webhooks.append(webhook)
-            elif self.bot is not None:
-                # botのみ提供されている場合、botの全サーバーの各チャンネルからwebhookを取得
-                for guild in self.bot.guilds:
-                    for channel in guild.text_channels:
-                        try:
-                            webhooks = await channel.webhooks()
-                            webhook_name = "amaoto_task_feed"
-                            webhook = discord.utils.get(webhooks, name=webhook_name)  # 既存のWebhookを取得
-                            if webhook is None:  # なければ無視
-                                continue
-                            webhooks.append(webhook)
-                        except Exception:  # pylint: disable=W0718
-                            continue
-                if len(webhooks) == 0:
-                    logger.error("Error: No webhooks found in any guilds.")
-                    return
-
-            # 各イベントについてリマインドメッセージを送信
-            for webhook in webhooks:
-                for event in result_events:
-                    await self.send_single_remind_msg(event, webhook)
+            target_webhooks = await self._get_broadcast_targets_webhooks() if self.broadcast_webhook_msg else None
+            for event in result_events:
+                await self.send_single_remind_msg(event, target_webhooks)
 
         except Exception as e:  # pylint: disable=W0718
             logger.exception(e)
