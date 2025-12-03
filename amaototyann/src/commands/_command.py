@@ -72,7 +72,7 @@ class Commands(MessageSender, metaclass=CommandRegistry):
     FINISH = Command(
         text="finish",
         description="リマインダー通知を終了するコマンド",
-        process=lambda self, e_id: self._finish_event(e_id)  # pylint: disable=W0212
+        process=lambda self, e_id: self.finish_event(e_id)  # pylint: disable=W0212
     )
     YOUTUBE = Command(
         text="youtube",
@@ -135,7 +135,8 @@ class Commands(MessageSender, metaclass=CommandRegistry):
             view = ProgressButton(
                 allow_role=target_role,
                 webhook=webhook,
-                message_id=msg.id
+                message_id=msg.id,
+                on_done=lambda interaction, button: self.finish_event(event["id"])
             )
 
             await webhook.edit_message(msg.id, embed=embed, view=view)
@@ -203,7 +204,8 @@ class Commands(MessageSender, metaclass=CommandRegistry):
         except Exception as e:  # pylint: disable=W0718
             logger.exception(e)
 
-    async def _finish_event(self, event_id: str):
+    async def finish_event(self, event_id: str):
+        """リマインダー通知を終了する関数"""
         try:
             response = requests.post(
                 GAS_URL,
