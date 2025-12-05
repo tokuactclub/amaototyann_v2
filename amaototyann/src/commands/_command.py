@@ -101,7 +101,7 @@ class Commands(MessageSender, metaclass=CommandRegistry):
         embed = discord.Embed(colour=0x00b0f4)
         embed.add_field(
             name=f"{event['job']} - 締め切りまで残り**{event['last_days']}**日",
-            value=f"{event['memo']}<@{event['person']}>",
+            value=f"{event['task']}<@{event['person']}>\n{event['memo']}",
             inline=False
         )
         embed.add_field(
