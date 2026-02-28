@@ -41,15 +41,11 @@ async def _backup_loop(app: FastAPI) -> None:
                 if await app.state.sheets_client.set_group_info(data):
                     await app.state.group_store.mark_clean()
 
-            # Settings backup
-            settings_store: SettingsStore = app.state.settings_store
-            if settings_store.is_dirty:
-                backup = await settings_store.dump_for_backup()
+            if app.state.settings_store.is_dirty:
+                backup = await app.state.settings_store.dump_for_backup()
                 await app.state.sheets_client.set_members(backup["members"])
-                pd_dicts = backup["practiceDefaults"]
-                await app.state.sheets_client.set_practice_defaults(pd_dicts)
-                # app_settings are updated individually, no bulk backup needed
-                await settings_store.mark_clean()
+                await app.state.sheets_client.set_practice_defaults(backup["practiceDefaults"])
+                await app.state.settings_store.mark_clean()
                 logger.info("settings_store をバックアップしました")
         except Exception as e:
             logger.error("Backup error: %s", e)

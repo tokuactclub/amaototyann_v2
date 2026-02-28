@@ -489,11 +489,6 @@ class TestLineWebhookEndpoint:
 # ---------------------------------------------------------------------------
 
 
-def _make_settings_store_with_data() -> SettingsStore:
-    """Pre-populated SettingsStore を返すヘルパー."""
-    return SettingsStore()
-
-
 def _make_mock_sheets_client_for_settings() -> AsyncMock:
     """設定エンドポイントで使う sheets_client モックを生成する."""
     mock = AsyncMock()

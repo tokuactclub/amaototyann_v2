@@ -38,9 +38,9 @@ class SheetsClient:
         creds = Credentials.from_service_account_info(info, scopes=_SCOPES)
         gc = gspread.authorize(creds)
         self._spreadsheet = gc.open_by_key(spreadsheet_id)
-        self._ws: dict[str, gspread.Worksheet] = {}
-        for name in _SHEET_NAMES:
-            self._ws[name] = self._spreadsheet.worksheet(name)
+        self._ws: dict[str, gspread.Worksheet] = {
+            name: self._spreadsheet.worksheet(name) for name in _SHEET_NAMES
+        }
         logger.info("SheetsClient 初期化完了 (spreadsheet=%s)", spreadsheet_id)
 
     # ------------------------------------------------------------------

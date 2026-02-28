@@ -96,7 +96,7 @@ class SettingsStore:
         async with self._lock:
             self._is_dirty = False
 
-    async def dump_for_backup(self) -> dict:
+    async def dump_for_backup(self) -> dict[str, object]:
         """GAS バックアップ用にデータをシリアライズ."""
         async with self._lock:
             return {
