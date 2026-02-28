@@ -2,7 +2,6 @@
 
 import dataclasses
 import logging
-from typing import Optional
 
 import discord
 
@@ -16,6 +15,7 @@ BOT_USERNAME = "あまおとちゃん"
 @dataclasses.dataclass
 class WebhookResponse:
     """Broadcast コマンドのレスポンスを格納するクラス."""
+
     webhook: discord.Webhook
     msg: discord.WebhookMessage
 
@@ -25,28 +25,33 @@ class DiscordSender:
 
     def __init__(
         self,
-        interaction: Optional[discord.Interaction] = None,
-        bot: Optional[discord.Client] = None,
+        interaction: discord.Interaction | None = None,
+        bot: discord.Client | None = None,
         broadcast: bool = False,
     ) -> None:
         self.interaction = interaction
         self.bot = bot
         self.broadcast = broadcast
-        self._webhook: Optional[discord.Webhook] = None
+        self._webhook: discord.Webhook | None = None
 
     async def send(
         self,
-        content: Optional[str] = None,
+        content: str | None = None,
         *,
-        embed: Optional[discord.Embed] = None,
-        view: Optional[discord.ui.View] = None,
+        embed: discord.Embed | None = None,
+        view: discord.ui.View | None = None,
         ephemeral: bool = False,
         force_webhook: bool = False,
-        target_webhooks: Optional[list[discord.Webhook]] = None,
+        target_webhooks: list[discord.Webhook] | None = None,
         **kwargs: object,
-    ) -> Optional[discord.WebhookMessage | list[WebhookResponse]]:
+    ) -> discord.WebhookMessage | list[WebhookResponse] | None:
         """メッセージを送信する."""
-        send_kwargs: dict = {"content": content, "embed": embed, "view": view, "ephemeral": ephemeral}
+        send_kwargs: dict = {
+            "content": content,
+            "embed": embed,
+            "view": view,
+            "ephemeral": ephemeral,
+        }
         send_kwargs.update(kwargs)
         send_kwargs = {k: v for k, v in send_kwargs.items() if v is not None}
 
@@ -105,13 +110,15 @@ class DiscordSender:
                 except Exception as e:
                     logger.exception(
                         "Failed to get webhook for %s/%s: %s",
-                        guild.name, channel.name, e,
+                        guild.name,
+                        channel.name,
+                        e,
                     )
         return webhooks
 
     async def _broadcast(
         self,
-        webhooks: Optional[list[discord.Webhook]] = None,
+        webhooks: list[discord.Webhook] | None = None,
         **kwargs: object,
     ) -> list[WebhookResponse]:
         """全対象チャンネルにブロードキャストする."""

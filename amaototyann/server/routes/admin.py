@@ -1,7 +1,6 @@
 """管理用ルーター."""
 
 import logging
-import os
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -24,6 +23,7 @@ async def health():
     if settings.discord_bot_token:
         try:
             from amaototyann.platforms.discord.bot import client as discord_client
+
             discord_status = "connected" if discord_client.is_ready() else "disconnected"
         except Exception:
             discord_status = "error"

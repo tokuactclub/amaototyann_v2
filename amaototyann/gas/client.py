@@ -84,10 +84,12 @@ async def fetch_group_info() -> GroupInfo | None:
 async def backup_bot_info(bot_data: list[list]) -> bool:
     """Bot 情報を GAS にバックアップする."""
     try:
-        response = await gas_request({
-            "cmd": "setBotInfo",
-            "options": {"bot_info": bot_data},
-        })
+        response = await gas_request(
+            {
+                "cmd": "setBotInfo",
+                "options": {"bot_info": bot_data},
+            }
+        )
         if response == "success":
             logger.info("Bot info backup success")
             return True
@@ -101,10 +103,12 @@ async def backup_bot_info(bot_data: list[list]) -> bool:
 async def backup_group_info(group_data: dict) -> bool:
     """グループ情報を GAS にバックアップする."""
     try:
-        response = await gas_request({
-            "cmd": "setGroupInfo",
-            "options": group_data,
-        })
+        response = await gas_request(
+            {
+                "cmd": "setGroupInfo",
+                "options": group_data,
+            }
+        )
         if response == "success":
             logger.info("Group info backup success")
             return True

@@ -1,12 +1,11 @@
 """プラットフォーム非依存のビジネスロジック."""
 
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import Optional
+from datetime import UTC, datetime, timedelta, timezone
 
+from amaototyann import messages
 from amaototyann.gas.client import gas_request
 from amaototyann.models.commands import CommandResult
-from amaototyann import messages
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +14,8 @@ def _calculate_date_difference(dt: datetime) -> int:
     """指定の日時と現在の日時の差分 (日数) を計算する."""
     if not isinstance(dt, datetime):
         raise TypeError(f"dt must be datetime, got {type(dt)}")
-    dt = dt.replace(tzinfo=timezone.utc)
-    today = datetime.now(timezone.utc)
+    dt = dt.replace(tzinfo=UTC)
+    today = datetime.now(UTC)
     return (dt - today).days
 
 
@@ -54,7 +53,7 @@ async def get_practice_events() -> CommandResult:
         return CommandResult(error=str(e))
 
 
-async def get_reminder_events(day_left: Optional[str] = None) -> CommandResult:
+async def get_reminder_events(day_left: str | None = None) -> CommandResult:
     """リマインダー対象のイベントを取得する."""
     try:
         events = await gas_request({"cmd": "reminder"})
@@ -66,9 +65,7 @@ async def get_reminder_events(day_left: Optional[str] = None) -> CommandResult:
             if event["finish"] == "true":
                 continue
 
-            event["date"] = datetime.fromisoformat(
-                event["date"].replace("Z", "+00:00")
-            )
+            event["date"] = datetime.fromisoformat(event["date"].replace("Z", "+00:00"))
             event["date"] = event["date"] + timedelta(days=1) - timedelta(seconds=1)
 
             day_difference = _calculate_date_difference(event["date"])
@@ -83,9 +80,7 @@ async def get_reminder_events(day_left: Optional[str] = None) -> CommandResult:
 
             if str(day_difference) in target_dates:
                 event["date"] = (
-                    event["date"]
-                    .astimezone(timezone(timedelta(hours=9)))
-                    .strftime("%m/%d")
+                    event["date"].astimezone(timezone(timedelta(hours=9))).strftime("%m/%d")
                 )
                 event["last_days"] = day_difference
                 result_events.append(event)

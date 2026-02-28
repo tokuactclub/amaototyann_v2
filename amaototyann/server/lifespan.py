@@ -7,14 +7,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from amaototyann.config import get_settings
-from amaototyann.logging_config import configure_logging
 from amaototyann.gas.client import (
-    fetch_bot_info,
-    fetch_group_info,
     backup_bot_info,
     backup_group_info,
     close_session,
+    fetch_bot_info,
+    fetch_group_info,
 )
+from amaototyann.logging_config import configure_logging
 from amaototyann.store.memory import BotStore, GroupStore
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,9 @@ async def lifespan(app: FastAPI):
     # 4. Discord client の起動 (オプション)
     tasks: list[asyncio.Task] = []
     if settings.discord_bot_token:
-        from amaototyann.platforms.discord.bot import client as discord_client, setup_events
+        from amaototyann.platforms.discord.bot import client as discord_client
+        from amaototyann.platforms.discord.bot import setup_events
+
         setup_events()
         task = asyncio.create_task(discord_client.start(settings.discord_bot_token))
         tasks.append(task)
@@ -90,6 +92,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     if settings.discord_bot_token:
         from amaototyann.platforms.discord.bot import client as discord_client
+
         if not discord_client.is_closed():
             await discord_client.close()
             logger.info("Discord client closed.")

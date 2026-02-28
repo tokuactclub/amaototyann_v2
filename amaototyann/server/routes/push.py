@@ -6,8 +6,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import PlainTextResponse
 
 from amaototyann.config import get_settings
-from amaototyann.server.lifespan import bot_store, group_store
 from amaototyann.platforms.line.commands import LineCommandHandler
+from amaototyann.server.lifespan import bot_store, group_store
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ async def _handle_discord_push(cmd: str) -> PlainTextResponse:
             return PlainTextResponse("error", status_code=400)
 
         return PlainTextResponse("finish")
-    except Exception as e:
+    except Exception:
         logger.exception("Discord push error")
         return PlainTextResponse("error", status_code=500)
 
@@ -75,6 +75,6 @@ async def _handle_line_push(cmd: str) -> PlainTextResponse:
         if result:
             return PlainTextResponse("finish")
         return PlainTextResponse("error", status_code=400)
-    except Exception as e:
+    except Exception:
         logger.exception("LINE push error")
         return PlainTextResponse("error", status_code=500)

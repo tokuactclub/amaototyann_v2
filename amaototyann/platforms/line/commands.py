@@ -2,11 +2,11 @@
 
 import logging
 
-from amaototyann.config import get_settings
-from amaototyann.core.commands import get_practice_events, get_reminder_events, finish_event
-from amaototyann.store.memory import BotStore, GroupStore
-from amaototyann.platforms.line.flex_messages import ReminderFlexBuilder
 from amaototyann import messages
+from amaototyann.config import get_settings
+from amaototyann.core.commands import finish_event, get_practice_events, get_reminder_events
+from amaototyann.platforms.line.flex_messages import ReminderFlexBuilder
+from amaototyann.store.memory import BotStore, GroupStore
 
 logger = logging.getLogger(__name__)
 
@@ -146,8 +146,8 @@ class LineCommandHandler:
 
         from linebot.v3.messaging import AsyncApiClient, AsyncMessagingApi, Configuration
         from linebot.v3.messaging.models import (
-            ReplyMessageRequest,
             PushMessageRequest,
+            ReplyMessageRequest,
             TextMessage,
         )
 
@@ -178,8 +178,8 @@ class LineCommandHandler:
 
         from linebot.v3.messaging import AsyncApiClient, AsyncMessagingApi, Configuration
         from linebot.v3.messaging.models import (
-            ReplyMessageRequest,
             PushMessageRequest,
+            ReplyMessageRequest,
         )
 
         config = Configuration(access_token=self._token)

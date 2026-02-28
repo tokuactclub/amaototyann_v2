@@ -15,9 +15,9 @@ def create_app() -> FastAPI:
     )
 
     # ルーターの登録
+    from amaototyann.server.routes.admin import router as admin_router
     from amaototyann.server.routes.line import router as line_router
     from amaototyann.server.routes.push import router as push_router
-    from amaototyann.server.routes.admin import router as admin_router
 
     app.include_router(line_router)
     app.include_router(push_router)
@@ -28,6 +28,7 @@ def create_app() -> FastAPI:
         settings = get_settings()
         if settings.is_debug:
             from amaototyann.debug.router import router as debug_router
+
             app.include_router(debug_router, prefix="/debug")
     except Exception:
         pass

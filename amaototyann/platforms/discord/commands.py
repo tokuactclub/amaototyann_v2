@@ -1,13 +1,12 @@
 """Discord Bot コマンド定義."""
 
 import logging
-from typing import Optional
 
 import discord
 from discord import app_commands
 
 from amaototyann import messages
-from amaototyann.core.commands import get_practice_events, get_reminder_events, finish_event
+from amaototyann.core.commands import finish_event, get_practice_events, get_reminder_events
 from amaototyann.platforms.discord.message_sender import DiscordSender, WebhookResponse
 from amaototyann.platforms.discord.ui import ProgressButton, ProgressStatus
 
@@ -103,11 +102,13 @@ async def _practice(sender: DiscordSender, *, is_broadcast: bool = False) -> Non
             await sender.send(result.text)
         elif result.is_empty and not is_broadcast:
             await sender.send(messages.NO_PRACTICE)
-    except Exception as e:
+    except Exception:
         logger.exception("Discord practice error")
 
 
-async def _reminder(sender: DiscordSender, *, day_left: Optional[str] = None, is_broadcast: bool = False) -> None:
+async def _reminder(
+    sender: DiscordSender, *, day_left: str | None = None, is_broadcast: bool = False
+) -> None:
     """リマインダーを送信する."""
     try:
         await sender.defer(ephemeral=True)
@@ -127,14 +128,14 @@ async def _reminder(sender: DiscordSender, *, day_left: Optional[str] = None, is
         if result.events:
             for event in result.events:
                 await _send_remind_msg(sender, event, target_webhooks)
-    except Exception as e:
+    except Exception:
         logger.exception("Discord reminder error")
 
 
 async def _send_remind_msg(
     sender: DiscordSender,
     event: dict,
-    target_webhooks: Optional[list[discord.Webhook]],
+    target_webhooks: list[discord.Webhook] | None,
 ) -> None:
     """個別リマインダーメッセージを送信する."""
     embed = discord.Embed(colour=0x00B0F4)
@@ -165,13 +166,16 @@ async def _send_remind_msg(
     for response in responses:
         webhook = response.webhook
         msg = response.msg
-        target_role = discord.utils.get(webhook.guild.roles, name=event["job"]) if webhook.guild else None
+        target_role = (
+            discord.utils.get(webhook.guild.roles, name=event["job"]) if webhook.guild else None
+        )
         view = ProgressButton(
             allow_role=target_role,
             webhook=webhook,
             message_id=msg.id,
             on_done=lambda interaction, button, eid=event["id"]: _finish_event(
-                DiscordSender(interaction=interaction), eid,
+                DiscordSender(interaction=interaction),
+                eid,
             ),
         )
         await webhook.edit_message(msg.id, embed=embed, view=view)
@@ -185,7 +189,7 @@ async def _finish_event(sender: DiscordSender, event_id: str) -> None:
             await sender.send(result.text)
         elif result.error:
             await sender.send(result.error)
-    except Exception as e:
+    except Exception:
         logger.exception("Discord finish error")
 
 

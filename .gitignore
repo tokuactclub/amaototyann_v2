@@ -1,8 +1,16 @@
 .env
 .venv/
+.venv311/
 __pycache__/
 test.py
 amaototyann/logs/app.log
 *.egg-info/
 dist/
 build/
+
+.ty_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/

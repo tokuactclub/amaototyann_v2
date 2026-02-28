@@ -2,7 +2,8 @@
 
 import dataclasses
 import logging
-from typing import Union, Callable, Any, Optional
+from collections.abc import Callable
+from typing import Any
 
 import discord
 
@@ -12,6 +13,7 @@ logger = logging.getLogger(__name__)
 @dataclasses.dataclass
 class ProgressStatus:
     """進捗報告のステータス定義."""
+
     GOOD: str = "🟢 : 順調です！"
     BAD: str = "🟡 : 進捗ダメです！"
     DONE: str = "🔵 : 終わりました！"
@@ -23,13 +25,13 @@ class ProgressButton(discord.ui.View):
 
     def __init__(
         self,
-        allow_user: Optional[discord.User] = None,
-        allow_role: Optional[discord.Role] = None,
-        webhook: Optional[discord.Webhook] = None,
-        message_id: Optional[int] = None,
-        on_done: Optional[Callable[[discord.Interaction, discord.ui.Button], Any]] = None,
-        on_good: Optional[Callable[[discord.Interaction, discord.ui.Button], Any]] = None,
-        on_bad: Optional[Callable[[discord.Interaction, discord.ui.Button], Any]] = None,
+        allow_user: discord.User | None = None,
+        allow_role: discord.Role | None = None,
+        webhook: discord.Webhook | None = None,
+        message_id: int | None = None,
+        on_done: Callable[[discord.Interaction, discord.ui.Button], Any] | None = None,
+        on_good: Callable[[discord.Interaction, discord.ui.Button], Any] | None = None,
+        on_bad: Callable[[discord.Interaction, discord.ui.Button], Any] | None = None,
     ) -> None:
         super().__init__(timeout=86400)
         self.allow_user_id = allow_user.id if allow_user else None
@@ -40,19 +42,19 @@ class ProgressButton(discord.ui.View):
         self.on_good = on_good
         self.on_bad = on_bad
 
-    def _is_allowed(self, user: Union[discord.Member, discord.User]) -> bool:
+    def _is_allowed(self, user: discord.Member | discord.User) -> bool:
         if self.allow_user_id and user.id == self.allow_user_id:
             return True
         if self.allow_role_id and isinstance(user, discord.Member):
             return any(r.id == self.allow_role_id for r in user.roles)
-        if not self.allow_user_id and not self.allow_role_id:
-            return True
-        return False
+        return not self.allow_user_id and not self.allow_role_id
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if self._is_allowed(interaction.user):
             return True
-        await interaction.response.send_message("あなたにはこの操作権限がありません。", ephemeral=True)
+        await interaction.response.send_message(
+            "あなたにはこの操作権限がありません。", ephemeral=True
+        )
         return False
 
     @discord.ui.button(label="順調です！", style=discord.ButtonStyle.primary)

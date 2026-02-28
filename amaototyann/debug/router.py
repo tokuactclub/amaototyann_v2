@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 
 import httpx
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -106,7 +106,9 @@ async def debug_send_webhook(
                 res = await client.post(url, json=webhook_template)
             response_data = {
                 "status_code": res.status_code,
-                "response_body": res.json() if "application/json" in res.headers.get("content-type", "") else res.text,
+                "response_body": res.json()
+                if "application/json" in res.headers.get("content-type", "")
+                else res.text,
             }
             database_data = await _fetch_database_data()
         except Exception as e:
@@ -140,7 +142,9 @@ async def update_template(request: Request):
             try:
                 webhook_template = json.loads(template_path.read_text(encoding="utf-8"))
                 if selected_template == "message.json":
-                    editable_fields = {"message.text": webhook_template["events"][0]["message"]["text"]}
+                    editable_fields = {
+                        "message.text": webhook_template["events"][0]["message"]["text"]
+                    }
             except Exception as e:
                 return HTMLResponse(f"<p>Error loading template: {e}</p>")
 

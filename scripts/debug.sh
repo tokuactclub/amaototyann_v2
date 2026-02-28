@@ -12,4 +12,4 @@ done
 echo "=========================="
 echo "Starting server (debug)..."
 echo "=========================="
-uvicorn amaototyann.server.app:app --host 0.0.0.0 --port 8000 --reload
+uv run uvicorn amaototyann.server.app:app --host 0.0.0.0 --port 8000 --reload

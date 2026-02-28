@@ -1,7 +1,7 @@
 """Discord Bot クライアント."""
 
 import logging
-from datetime import time, timezone, timedelta
+from datetime import time, timedelta, timezone
 
 import discord
 from discord import app_commands
@@ -45,6 +45,7 @@ def setup_events() -> None:
 
         # コマンドを同期
         from amaototyann.platforms.discord.commands import register_commands
+
         register_commands(tree)
         await tree.sync()
 
@@ -59,11 +60,13 @@ def setup_events() -> None:
 
 # === discord.ext.tasks スケジューラ ===
 
+
 @tasks.loop(time=time(hour=8, minute=0, tzinfo=JST))
 async def practice_task() -> None:
     """JST 08:00 に練習通知を送信."""
     logger.info("Running scheduled practice task")
     from amaototyann.platforms.discord.commands import broadcast_practice
+
     await broadcast_practice(client)
 
 
@@ -72,6 +75,7 @@ async def reminder_task() -> None:
     """JST 20:00 にリマインダーを送信."""
     logger.info("Running scheduled reminder task")
     from amaototyann.platforms.discord.commands import broadcast_reminder
+
     await broadcast_reminder(client)
 
 

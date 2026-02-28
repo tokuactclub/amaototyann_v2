@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import Sequence
+from collections.abc import Sequence
 
 from amaototyann.models.bot import BotInfo, GroupInfo
 
@@ -59,8 +59,14 @@ class BotStore:
         """GAS バックアップ用にデータをシリアライズ."""
         async with self._lock:
             return [
-                [b.id, b.bot_name, b.channel_access_token,
-                 b.channel_secret, b.gpt_webhook_url, b.in_group]
+                [
+                    b.id,
+                    b.bot_name,
+                    b.channel_access_token,
+                    b.channel_secret,
+                    b.gpt_webhook_url,
+                    b.in_group,
+                ]
                 for b in self._data.values()
             ]
 

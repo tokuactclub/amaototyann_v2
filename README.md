@@ -204,3 +204,53 @@ chmod +x scripts/debug.sh
 - **デバッグツール修復**: Flask → FastAPI ルーターに移行
 - **エラーハンドリング統一**: `CommandResult` 境界でデータ化する1パターン
 - **モダン Python**: Python 3.12+, pyproject.toml, Pydantic BaseSettings
+
+---
+
+## 開発環境
+
+### 必要なツール
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/) — パッケージマネージャー
+
+### セットアップ
+```bash
+uv sync          # 依存関係インストール
+```
+
+### 開発コマンド
+```bash
+# サーバー起動
+./scripts/start.sh          # 本番モード
+./scripts/debug.sh          # 開発モード（ホットリロード）
+
+# コード品質
+./scripts/lint.sh           # ruff format + ruff check + ty check
+uv run ruff format .        # フォーマット
+uv run ruff check --fix .   # リント（自動修正）
+uv run ty check amaototyann/ # 型チェック
+
+# テスト
+uv run pytest tests/ -v                    # テスト実行
+uv run pytest tests/ -v --cov             # カバレッジ付き
+uv run pytest tests/ -v --cov --cov-report=html  # HTMLレポート
+```
+
+### Docker
+```bash
+docker compose up app                    # 本番起動
+docker compose --profile dev up app-dev  # 開発モード
+docker build -t amaototyann .            # ビルドのみ
+```
+
+### Pre-commit
+```bash
+uv run pre-commit install   # Git hooks インストール
+```
+
+### CI/CD
+GitHub Actions で以下を自動実行:
+- `ruff format --check` — フォーマットチェック
+- `ruff check` — リント
+- `ty check` — 型チェック（warning のみ）
+- `pytest --cov` — テスト + カバレッジ

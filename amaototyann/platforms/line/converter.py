@@ -17,7 +17,8 @@ def _register(keys: list[str], value: str, *, prefix: bool = False) -> None:
 # === 変換ルール登録 ===
 _register(
     ["引き継ぎ資料", "引継ぎ資料", "ScrapBox", "ひきつぎしりょう", "すくらっぷぼっくす"],
-    "!handover", prefix=True,
+    "!handover",
+    prefix=True,
 )
 _register(["Youtube", "ユーチューブ", "ようつべ"], "!youtube")
 _register(
