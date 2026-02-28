@@ -167,7 +167,7 @@ async def _send_remind_msg(
         webhook = response.webhook
         msg = response.msg
         target_role = (
-            discord.utils.get(webhook.guild.roles, name=event["job"]) if webhook.guild else None
+            discord.utils.get(webhook.guild.roles, name=event["role"]) if webhook.guild else None
         )
         view = ProgressButton(
             allow_role=target_role,

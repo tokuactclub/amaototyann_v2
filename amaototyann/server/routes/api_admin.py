@@ -252,12 +252,12 @@ async def put_bots(body: list[dict[str, Any]]) -> JSONResponse:
         if new_bot_data:
             new_bots = [
                 BotInfo(
-                    id=row[0],
+                    id=int(row[0]),
                     bot_name=row[1],
                     channel_access_token=row[2],
                     channel_secret=row[3],
                     gpt_webhook_url=row[4],
-                    in_group=row[5],
+                    in_group=row[5].upper() == "TRUE",
                 )
                 for row in new_bot_data
             ]

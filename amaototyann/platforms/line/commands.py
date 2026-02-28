@@ -86,7 +86,7 @@ class LineCommandHandler:
             builder = ReminderFlexBuilder()
             for event in result.events:
                 builder.add_reminder(
-                    job=event["job"],
+                    job=event["role"],
                     person=event["person"],
                     deadline=event["date"],
                     last_days=event["last_days"],
