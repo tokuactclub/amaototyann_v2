@@ -9,10 +9,11 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """環境変数ベースのアプリケーション設定."""
 
-    gas_url: str
     discord_bot_token: str | None = None
     server_url: str | None = None
     is_render_server: bool = False
+    google_service_account_json: str | None = None
+    google_spreadsheet_id: str | None = None
     admin_password: str | None = None
     # 後方互換性のため ADMIN_TOKEN も受け付ける (ADMIN_PASSWORD が優先)
     admin_token: str | None = None

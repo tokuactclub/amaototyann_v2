@@ -5,10 +5,21 @@ import logging
 from datetime import UTC, datetime, timedelta, timezone
 
 from amaototyann import messages
-from amaototyann.gas.client import gas_request
 from amaototyann.models.commands import CommandResult
 
 logger = logging.getLogger(__name__)
+
+
+def _get_sheets_client():
+    """sheets_client のグローバルインスタンスを取得する.
+
+    循環インポートを避けるため遅延インポートする。
+    """
+    from amaototyann.server.lifespan import sheets_client
+
+    if sheets_client is None:
+        raise RuntimeError("SheetsClient is not initialized")
+    return sheets_client
 
 
 def _calculate_date_difference(dt: datetime) -> int:
@@ -23,18 +34,19 @@ def _calculate_date_difference(dt: datetime) -> int:
 async def get_practice_events() -> CommandResult:
     """練習予定を取得する."""
     try:
-        events = await gas_request({"cmd": "practice"})
+        client = _get_sheets_client()
+        events = await client.get_practice_events()
         logger.info("practice events: %s", events)
         if not isinstance(events, list):
-            return CommandResult(error="Unexpected response from GAS")
+            return CommandResult(error="Unexpected response from Sheets")
 
         formatted = []
         for x in events:
             try:
                 text = messages.PRACTICE.format(
                     x["place"],
-                    x["start"].split()[3][:-3],
-                    x["end"].split()[3][:-3],
+                    x["start"],
+                    x["end"],
                     "\n" + x["memo"] if x["memo"] else "",
                 )
             except Exception:
@@ -57,9 +69,10 @@ async def get_practice_events() -> CommandResult:
 async def get_reminder_events(day_left: str | None = None) -> CommandResult:
     """リマインダー対象のイベントを取得する."""
     try:
-        events = await gas_request({"cmd": "reminder"})
+        client = _get_sheets_client()
+        events = await client.get_reminders()
         if not isinstance(events, list):
-            return CommandResult(error="Unexpected response from GAS")
+            return CommandResult(error="Unexpected response from Sheets")
 
         result_events = []
         for event in events:
@@ -97,10 +110,10 @@ async def get_reminder_events(day_left: str | None = None) -> CommandResult:
 async def finish_event(event_id: str) -> CommandResult:
     """リマインダー通知を終了する."""
     try:
-        response = await gas_request({"cmd": "finish", "options": {"id": event_id}})
-        task_name = response if isinstance(response, str) else str(response)
-        if task_name != "error":
-            return CommandResult(text=f"{task_name}の通知を終わるよ！")
+        client = _get_sheets_client()
+        response = await client.finish_reminder(event_id)
+        if response is not None:
+            return CommandResult(text=f"{response}の通知を終わるよ！")
         return CommandResult(error="エラーで通知を終われなかったよ！ごめんね！")
     except Exception as e:
         logger.exception("finish_event error")
@@ -110,9 +123,10 @@ async def finish_event(event_id: str) -> CommandResult:
 async def get_all_reminders() -> CommandResult:
     """全リマインダーを取得する(管理画面用、フィルタなし)."""
     try:
-        events = await gas_request({"cmd": "reminder"})
+        client = _get_sheets_client()
+        events = await client.get_reminders()
         if not isinstance(events, list):
-            return CommandResult(error="Unexpected response from GAS")
+            return CommandResult(error="Unexpected response from Sheets")
 
         result_events = []
         for event in events:
@@ -137,19 +151,9 @@ async def add_practice(
 ) -> CommandResult:
     """練習予定を追加する."""
     try:
-        response = await gas_request(
-            {
-                "cmd": "addPractice",
-                "options": {
-                    "date": date,
-                    "place": place,
-                    "startTime": start_time,
-                    "endTime": end_time,
-                    "memo": memo,
-                },
-            }
-        )
-        if response == "success":
+        client = _get_sheets_client()
+        success = await client.add_practice(date, place, start_time, end_time, memo)
+        if success:
             return CommandResult(text="練習予定を追加しました")
         return CommandResult(error="練習予定の追加に失敗しました")
     except Exception as e:
@@ -167,20 +171,9 @@ async def add_reminder(
 ) -> CommandResult:
     """リマインダーを追加する."""
     try:
-        response = await gas_request(
-            {
-                "cmd": "addReminder",
-                "options": {
-                    "deadline": deadline,
-                    "role": role,
-                    "person": person,
-                    "task": task,
-                    "memo": memo,
-                    "remindDate": remind_date,
-                },
-            }
-        )
-        if response == "success":
+        client = _get_sheets_client()
+        success = await client.add_reminder(deadline, role, person, task, memo, remind_date)
+        if success:
             return CommandResult(text="リマインダーを追加しました")
         return CommandResult(error="リマインダーの追加に失敗しました")
     except Exception as e:
@@ -191,9 +184,12 @@ async def add_reminder(
 async def delete_event(event_id: str) -> CommandResult:
     """カレンダーイベントを削除する."""
     try:
-        response = await gas_request({"cmd": "deleteEvent", "options": {"id": event_id}})
-        if isinstance(response, str) and "削除" in response:
-            return CommandResult(text=response)
+        client = _get_sheets_client()
+        result = await client.delete_practice(event_id)
+        if result is None:
+            result = await client.delete_reminder(event_id)
+        if result is not None:
+            return CommandResult(text=f"{result}を削除しました")
         return CommandResult(error="イベントの削除に失敗しました")
     except Exception as e:
         logger.exception("delete_event error")

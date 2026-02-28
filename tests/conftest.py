@@ -1,7 +1,7 @@
 """Pytest configuration and shared fixtures for the test suite.
 
 Design principles:
-- All external I/O (GAS API, Discord, aiohttp sessions) is mocked.
+- All external I/O (Google Sheets, Discord, aiohttp sessions) is mocked.
 - The real lifespan is replaced with a null context so no background tasks
   or network connections are created during tests.
 - Environment variables are isolated per test via monkeypatch.
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -38,9 +38,6 @@ def settings_override(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, 
     This fixture is autouse so it always runs, ensuring no test accidentally
     inherits real credentials from a .env file or the parent process environment.
     """
-    # Minimal required field: gas_url (the only non-optional Settings field)
-    monkeypatch.setenv("GAS_URL", "https://test.example.com/gas")
-
     # Optional fields — set to empty/dummy values to prevent accidental real usage
     monkeypatch.setenv("DISCORD_BOT_TOKEN", "")
     monkeypatch.setenv("SERVER_URL", "")
@@ -73,29 +70,6 @@ def group_store() -> GroupStore:
 
 
 # ---------------------------------------------------------------------------
-# GAS client mock
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def mock_gas_request() -> Generator[AsyncMock, None, None]:
-    """Patch amaototyann.gas.client.gas_request with an AsyncMock.
-
-    The mock returns an empty list by default.  Individual tests can override
-    the return value or side_effect as needed:
-
-        mock_gas_request.return_value = [...]
-        mock_gas_request.side_effect = Exception("network error")
-    """
-    with patch(
-        "amaototyann.gas.client.gas_request",
-        new_callable=AsyncMock,
-    ) as mock:
-        mock.return_value = []
-        yield mock
-
-
-# ---------------------------------------------------------------------------
 # FastAPI test client (null lifespan)
 # ---------------------------------------------------------------------------
 
@@ -104,7 +78,7 @@ def mock_gas_request() -> Generator[AsyncMock, None, None]:
 async def _null_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """No-op lifespan that skips all startup/shutdown side-effects.
 
-    Replaces the real lifespan so tests never attempt GAS fetches, Discord
+    Replaces the real lifespan so tests never attempt Sheets fetches, Discord
     bot startup, or background task creation.
     """
     yield

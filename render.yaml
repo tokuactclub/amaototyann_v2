@@ -6,7 +6,9 @@ services:
     envVars:
       - key: IS_RENDER_SERVER
         value: "True"
-      - key: GAS_URL
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: GOOGLE_SPREADSHEET_ID
         sync: false
       - key: DISCORD_BOT_TOKEN
         sync: false

@@ -8,14 +8,9 @@ import aiohttp
 from fastapi import FastAPI
 
 from amaototyann.config import get_settings
-from amaototyann.gas.client import (
-    backup_bot_info,
-    backup_group_info,
-    close_session,
-    fetch_bot_info,
-    fetch_group_info,
-)
 from amaototyann.logging_config import configure_logging
+from amaototyann.models.bot import BotInfo, GroupInfo
+from amaototyann.sheets.client import SheetsClient
 from amaototyann.store.memory import BotStore, GroupStore
 
 logger = logging.getLogger(__name__)
@@ -24,9 +19,15 @@ logger = logging.getLogger(__name__)
 bot_store = BotStore()
 group_store = GroupStore()
 
+# グローバル SheetsClient インスタンス
+sheets_client: SheetsClient | None = None
+
 
 async def _backup_loop() -> None:
-    """定期的に DB を GAS にバックアップするループ."""
+    """定期的にストアデータを Google Sheets にバックアップするループ."""
+    if sheets_client is None:
+        return
+
     settings = get_settings()
     while True:
         try:
@@ -35,12 +36,12 @@ async def _backup_loop() -> None:
             else:
                 if bot_store.is_dirty:
                     data = await bot_store.dump_for_backup()
-                    if await backup_bot_info(data):
+                    if await sheets_client.set_bot_info(data):
                         await bot_store.mark_clean()
 
                 if group_store.is_dirty:
                     data = await group_store.dump_for_backup()
-                    if await backup_group_info(data):
+                    if await sheets_client.set_group_info(data):
                         await group_store.mark_clean()
         except Exception as e:
             logger.error("Backup error: %s", e)
@@ -80,18 +81,41 @@ async def lifespan(app: FastAPI):
     # 2. 設定読み込み
     settings = get_settings()
 
-    # 3. GAS から初期データ取得
-    bots = await fetch_bot_info()
-    if bots:
-        await bot_store.load(bots)
+    # 3. SheetsClient 初期化 & 初期データ取得
+    global sheets_client
+    if settings.google_service_account_json and settings.google_spreadsheet_id:
+        sheets_client = SheetsClient(
+            settings.google_service_account_json,
+            settings.google_spreadsheet_id,
+        )
+        logger.info("SheetsClient initialized")
     else:
-        logger.warning("No bot info loaded from GAS")
+        logger.warning("Google Sheets credentials not configured")
 
-    group = await fetch_group_info()
-    if group:
-        await group_store.load(group)
-    else:
-        logger.warning("No group info loaded from GAS")
+    if sheets_client:
+        bot_data = await sheets_client.get_bot_info()
+        if bot_data:
+            bots = [
+                BotInfo(
+                    id=row[0],
+                    bot_name=row[1],
+                    channel_access_token=row[2],
+                    channel_secret=row[3],
+                    gpt_webhook_url=row[4],
+                    in_group=row[5],
+                )
+                for row in bot_data
+            ]
+            await bot_store.load(bots)
+        else:
+            logger.warning("No bot info loaded from Sheets")
+
+        group_data = await sheets_client.get_group_info()
+        if group_data:
+            group = GroupInfo(id=group_data["id"], group_name=group_data["groupName"])
+            await group_store.load(group)
+        else:
+            logger.warning("No group info loaded from Sheets")
 
     # 4. Discord client の起動 (オプション)
     tasks: list[asyncio.Task] = []
@@ -129,5 +153,4 @@ async def lifespan(app: FastAPI):
     for task in tasks:
         task.cancel()
 
-    await close_session()
     logger.info("amaototyann v3 shutdown complete.")

@@ -15,9 +15,9 @@ from amaototyann.core.commands import (
     finish_event,
     get_all_reminders,
 )
-from amaototyann.gas.client import gas_request
+from amaototyann.models.bot import BotInfo
 from amaototyann.models.schedule import PracticeCreate, ReminderCreate
-from amaototyann.server.lifespan import bot_store, group_store
+from amaototyann.server.lifespan import bot_store, group_store, sheets_client
 
 logger = logging.getLogger(__name__)
 
@@ -130,13 +130,12 @@ async def me() -> dict[str, bool]:
 async def get_practice() -> JSONResponse:
     """練習予定一覧を取得する.
 
-    GAS から生の練習予定データをリストとして返す。
+    Google Sheets から生の練習予定データをリストとして返す。
     """
     try:
-        events = await gas_request({"cmd": "practice"})
-        if not isinstance(events, list):
-            logger.error("Unexpected GAS response for practice: %s", events)
-            raise HTTPException(status_code=500, detail="Unexpected response from GAS")
+        if sheets_client is None:
+            raise HTTPException(status_code=503, detail="SheetsClient not initialized")
+        events = await sheets_client.get_practice_events()
         return JSONResponse(events)
     except HTTPException:
         raise
@@ -238,22 +237,38 @@ async def get_bots() -> JSONResponse:
 
 @router.put("/bots", dependencies=_AUTH)
 async def put_bots(body: list[dict[str, Any]]) -> JSONResponse:
-    """Bot 情報を更新し、GAS と bot_store を同期する."""
+    """Bot 情報を更新し、Google Sheets と bot_store を同期する."""
     try:
-        response = await gas_request({"cmd": "setBotInfo", "options": {"bot_info": body}})
-        logger.info("setBotInfo GAS response: %s", response)
+        if sheets_client is None:
+            raise HTTPException(status_code=503, detail="SheetsClient not initialized")
 
-        # GAS から最新情報を再取得して bot_store をリロード
-        from amaototyann.gas.client import fetch_bot_info
+        success = await sheets_client.set_bot_info(body)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update bot info in Sheets")
+        logger.info("set_bot_info Sheets response: success=%s", success)
 
-        new_bots = await fetch_bot_info()
-        if new_bots:
+        # Sheets から最新情報を再取得して bot_store をリロード
+        new_bot_data = await sheets_client.get_bot_info()
+        if new_bot_data:
+            new_bots = [
+                BotInfo(
+                    id=row[0],
+                    bot_name=row[1],
+                    channel_access_token=row[2],
+                    channel_secret=row[3],
+                    gpt_webhook_url=row[4],
+                    in_group=row[5],
+                )
+                for row in new_bot_data
+            ]
             await bot_store.load(new_bots)
             logger.info("bot_store reloaded with %d bots", len(new_bots))
         else:
-            logger.warning("fetch_bot_info returned empty after setBotInfo")
+            logger.warning("get_bot_info returned empty after set_bot_info")
 
         return JSONResponse({"ok": True})
+    except HTTPException:
+        raise
     except Exception as err:
         logger.exception("put_bots error")
         raise HTTPException(status_code=500, detail="Internal server error") from err
@@ -277,7 +292,7 @@ async def get_group() -> JSONResponse:
 
 @router.put("/group", dependencies=_AUTH)
 async def put_group(body: dict[str, str]) -> JSONResponse:
-    """グループ情報を更新し、GAS と group_store を同期する."""
+    """グループ情報を更新し、Google Sheets と group_store を同期する."""
     group_id = body.get("id", "")
     group_name = body.get("groupName", "")
 
@@ -285,8 +300,13 @@ async def put_group(body: dict[str, str]) -> JSONResponse:
         raise HTTPException(status_code=422, detail="id and groupName are required")
 
     try:
-        response = await gas_request({"cmd": "setGroupInfo", "options": body})
-        logger.info("setGroupInfo GAS response: %s", response)
+        if sheets_client is None:
+            raise HTTPException(status_code=503, detail="SheetsClient not initialized")
+
+        success = await sheets_client.set_group_info(body)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update group info in Sheets")
+        logger.info("set_group_info Sheets response: success=%s", success)
 
         await group_store.set_group_info(group_id=group_id, group_name=group_name)
         logger.info("group_store updated: %s (%s)", group_name, group_id)
