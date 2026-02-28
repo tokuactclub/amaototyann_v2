@@ -6,6 +6,7 @@ from datetime import time, timedelta, timezone
 import discord
 from discord import app_commands
 from discord.ext import tasks
+from fastapi import FastAPI
 
 from amaototyann import messages
 
@@ -22,9 +23,13 @@ intents.messages = True
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
+_app: FastAPI | None = None
 
-def setup_events() -> None:
+
+def setup_events(app: FastAPI) -> None:
     """Discord イベントハンドラを登録する."""
+    global _app
+    _app = app
 
     @client.event
     async def on_guild_join(guild: discord.Guild) -> None:
@@ -46,7 +51,7 @@ def setup_events() -> None:
         # コマンドを同期
         from amaototyann.platforms.discord.commands import register_commands
 
-        register_commands(tree)
+        register_commands(tree, _app.state.sheets_client if _app else None)
         await tree.sync()
 
         # スケジューラを起動
@@ -67,7 +72,8 @@ async def practice_task() -> None:
     logger.info("Running scheduled practice task")
     from amaototyann.platforms.discord.commands import broadcast_practice
 
-    await broadcast_practice(client)
+    sheets_client = _app.state.sheets_client if _app else None
+    await broadcast_practice(client, sheets_client)
 
 
 @tasks.loop(time=time(hour=20, minute=0, tzinfo=JST))
@@ -76,7 +82,8 @@ async def reminder_task() -> None:
     logger.info("Running scheduled reminder task")
     from amaototyann.platforms.discord.commands import broadcast_reminder
 
-    await broadcast_reminder(client)
+    sheets_client = _app.state.sheets_client if _app else None
+    await broadcast_reminder(client, sheets_client)
 
 
 @practice_task.before_loop

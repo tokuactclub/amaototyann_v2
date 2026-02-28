@@ -75,6 +75,7 @@ async def _handle_line_push(request: Request, cmd: str) -> PlainTextResponse:
 
         handler = LineCommandHandler(
             channel_access_token=bot.channel_access_token,
+            sheets_client=request.app.state.sheets_client,
             target_group_id=target_group_id,
         )
         result = await handler.process(cmd)

@@ -6,6 +6,7 @@ from amaototyann import messages
 from amaototyann.config import get_settings
 from amaototyann.core.commands import finish_event, get_practice_events, get_reminder_events
 from amaototyann.platforms.line.flex_messages import ReminderFlexBuilder
+from amaototyann.sheets.client import SheetsClient
 from amaototyann.store.memory import BotStore, GroupStore
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ class LineCommandHandler:
         self,
         *,
         channel_access_token: str,
+        sheets_client: SheetsClient,
         reply_token: str | None = None,
         target_group_id: str | None = None,
         bot_id: int | None = None,
@@ -26,6 +28,7 @@ class LineCommandHandler:
         source_group_id: str | None = None,
     ) -> None:
         self._token = channel_access_token
+        self._sheets_client = sheets_client
         self._reply_token = reply_token
         self._target_group_id = target_group_id
         self._bot_id = bot_id
@@ -65,7 +68,7 @@ class LineCommandHandler:
         return True
 
     async def _practice(self) -> None:
-        result = await get_practice_events()
+        result = await get_practice_events(self._sheets_client)
         if result.error:
             logger.error("practice error: %s", result.error)
             return
@@ -75,7 +78,7 @@ class LineCommandHandler:
             await self._send_text(messages.NO_PRACTICE)
 
     async def _reminder(self, day_left: str | None = None) -> None:
-        result = await get_reminder_events(day_left)
+        result = await get_reminder_events(self._sheets_client, day_left)
         if result.error:
             logger.error("reminder error: %s", result.error)
             return
@@ -97,7 +100,7 @@ class LineCommandHandler:
             await self._send_flex(builder.build())
 
     async def _finish_event(self, event_id: str) -> None:
-        result = await finish_event(event_id)
+        result = await finish_event(self._sheets_client, event_id)
         if result.text:
             await self._send_text(result.text)
         elif result.error:

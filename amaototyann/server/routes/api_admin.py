@@ -1,5 +1,7 @@
 """管理 API ルーター (Web 管理画面用)."""
 
+import hashlib
+import hmac
 import logging
 import secrets
 from typing import Any
@@ -23,6 +25,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin")
 
 _SESSION_COOKIE = "session_token"
+_SESSION_SECRET = b"amaototyann-session-v1"
+
+
+def _derive_session_token(password: str) -> str:
+    """パスワードから HMAC ベースのセッショントークンを導出する."""
+    return hmac.new(_SESSION_SECRET, password.encode(), hashlib.sha256).hexdigest()
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +51,8 @@ async def require_admin(
         logger.debug("admin_password not configured — allowing access (debug mode)")
         return
 
-    if session_token is None or not secrets.compare_digest(session_token, settings.admin_password):
+    expected = _derive_session_token(settings.admin_password)
+    if session_token is None or not secrets.compare_digest(session_token, expected):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
@@ -85,9 +94,10 @@ async def login(body: dict[str, Any]) -> JSONResponse:
     response = JSONResponse({"ok": True})
     response.set_cookie(
         key=_SESSION_COOKIE,
-        value=settings.admin_password,
+        value=_derive_session_token(settings.admin_password),
         httponly=True,
         samesite="lax",
+        max_age=86400,  # 24 hours
     )
     logger.info("Admin login successful")
     return response

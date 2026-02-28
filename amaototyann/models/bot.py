@@ -10,7 +10,7 @@ class BotInfo(BaseModel):
     bot_name: str
     channel_access_token: str
     channel_secret: str
-    gpt_webhook_url: str
+    gpt_webhook_url: str | None = None
     in_group: bool
 
 

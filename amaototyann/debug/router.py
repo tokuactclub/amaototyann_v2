@@ -26,6 +26,16 @@ def _get_template_files() -> list[str]:
     return [f.name for f in _WEBHOOK_TEMPLATES_DIR.iterdir() if f.suffix == ".json"]
 
 
+def _safe_template_path(template: str) -> Path | None:
+    """テンプレートパスを検証し、ディレクトリトラバーサルを防ぐ."""
+    template_path = (_WEBHOOK_TEMPLATES_DIR / template).resolve()
+    if template_path.parent != _WEBHOOK_TEMPLATES_DIR.resolve():
+        return None
+    if not template_path.exists():
+        return None
+    return template_path
+
+
 async def _fetch_database_data(bot_store) -> list[list]:
     """Bot 情報を取得する."""
     try:
@@ -71,8 +81,8 @@ async def debug_send_webhook(
     database_data = await _fetch_database_data(request.app.state.bot_store)
 
     # テンプレート読み込み
-    template_path = _WEBHOOK_TEMPLATES_DIR / template
-    if template_path.exists():
+    template_path = _safe_template_path(template)
+    if template_path is not None:
         try:
             webhook_template = json.loads(template_path.read_text(encoding="utf-8"))
             webhook_template["debug"] = True
@@ -136,8 +146,8 @@ async def update_template(request: Request):
     database_data = await _fetch_database_data(request.app.state.bot_store)
 
     if selected_template:
-        template_path = _WEBHOOK_TEMPLATES_DIR / selected_template
-        if template_path.exists():
+        template_path = _safe_template_path(selected_template)
+        if template_path is not None:
             try:
                 webhook_template = json.loads(template_path.read_text(encoding="utf-8"))
                 if selected_template == "message.json":

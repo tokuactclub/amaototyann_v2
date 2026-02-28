@@ -41,7 +41,7 @@ class SheetsClient:
 
     async def _run_sync(self, func: Any, *args: Any, **kwargs: Any) -> Any:
         """同期関数を asyncio executor で実行する."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, partial(func, *args, **kwargs))
 
     # ------------------------------------------------------------------

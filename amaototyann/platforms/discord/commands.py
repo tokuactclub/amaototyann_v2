@@ -9,13 +9,16 @@ from amaototyann import messages
 from amaototyann.core.commands import finish_event, get_practice_events, get_reminder_events
 from amaototyann.platforms.discord.message_sender import DiscordSender, WebhookResponse
 from amaototyann.platforms.discord.ui import ProgressButton, ProgressStatus
+from amaototyann.sheets.client import SheetsClient
 
 logger = logging.getLogger(__name__)
 
 _registered = False
 
 
-def register_commands(tree: app_commands.CommandTree) -> None:
+def register_commands(
+    tree: app_commands.CommandTree, sheets_client: SheetsClient | None = None
+) -> None:
     """スラッシュコマンドを CommandTree に登録する."""
     global _registered
     if _registered:
@@ -41,18 +44,18 @@ def register_commands(tree: app_commands.CommandTree) -> None:
     @tree.command(name="reminder", description="リマインダーを送信するコマンド")
     async def reminder_cmd(interaction: discord.Interaction) -> None:
         sender = DiscordSender(interaction=interaction)
-        await _reminder(sender)
+        await _reminder(sender, sheets_client=sheets_client)
 
     @tree.command(name="practice", description="練習があるか送信するコマンド")
     async def practice_cmd(interaction: discord.Interaction) -> None:
         sender = DiscordSender(interaction=interaction)
-        await _practice(sender)
+        await _practice(sender, sheets_client=sheets_client)
 
     @tree.command(name="finish", description="リマインダー通知を終了するコマンド")
     @app_commands.describe(event_id="終了するイベントのID")
     async def finish_cmd(interaction: discord.Interaction, event_id: str) -> None:
         sender = DiscordSender(interaction=interaction)
-        await _finish_event(sender, event_id)
+        await _finish_event(sender, event_id, sheets_client=sheets_client)
 
     @tree.command(name="place", description="場所を送信するコマンド（未実装）")
     async def place_cmd(interaction: discord.Interaction) -> None:
@@ -90,11 +93,16 @@ def register_commands(tree: app_commands.CommandTree) -> None:
         await sender.send(messages.HOMEPAGE)
 
 
-async def _practice(sender: DiscordSender, *, is_broadcast: bool = False) -> None:
+async def _practice(
+    sender: DiscordSender,
+    *,
+    sheets_client: SheetsClient | None = None,
+    is_broadcast: bool = False,
+) -> None:
     """練習予定を送信する."""
     try:
         await sender.defer()
-        result = await get_practice_events()
+        result = await get_practice_events(sheets_client)
         if result.error:
             logger.error("practice error: %s", result.error)
             return
@@ -107,12 +115,16 @@ async def _practice(sender: DiscordSender, *, is_broadcast: bool = False) -> Non
 
 
 async def _reminder(
-    sender: DiscordSender, *, day_left: str | None = None, is_broadcast: bool = False
+    sender: DiscordSender,
+    *,
+    sheets_client: SheetsClient | None = None,
+    day_left: str | None = None,
+    is_broadcast: bool = False,
 ) -> None:
     """リマインダーを送信する."""
     try:
         await sender.defer(ephemeral=True)
-        result = await get_reminder_events(day_left)
+        result = await get_reminder_events(sheets_client, day_left)
 
         if result.error:
             await sender.send(result.error)
@@ -127,7 +139,7 @@ async def _reminder(
         target_webhooks = await sender.get_broadcast_webhooks() if sender.broadcast else None
         if result.events:
             for event in result.events:
-                await _send_remind_msg(sender, event, target_webhooks)
+                await _send_remind_msg(sender, event, target_webhooks, sheets_client=sheets_client)
     except Exception:
         logger.exception("Discord reminder error")
 
@@ -136,6 +148,8 @@ async def _send_remind_msg(
     sender: DiscordSender,
     event: dict,
     target_webhooks: list[discord.Webhook] | None,
+    *,
+    sheets_client: SheetsClient | None = None,
 ) -> None:
     """個別リマインダーメッセージを送信する."""
     embed = discord.Embed(colour=0x00B0F4)
@@ -173,18 +187,24 @@ async def _send_remind_msg(
             allow_role=target_role,
             webhook=webhook,
             message_id=msg.id,
-            on_done=lambda interaction, button, eid=event["id"]: _finish_event(
+            on_done=lambda interaction, button, eid=event["id"], sc=sheets_client: _finish_event(
                 DiscordSender(interaction=interaction),
                 eid,
+                sheets_client=sc,
             ),
         )
         await webhook.edit_message(msg.id, embed=embed, view=view)
 
 
-async def _finish_event(sender: DiscordSender, event_id: str) -> None:
+async def _finish_event(
+    sender: DiscordSender,
+    event_id: str,
+    *,
+    sheets_client: SheetsClient | None = None,
+) -> None:
     """リマインダー通知を終了する."""
     try:
-        result = await finish_event(event_id)
+        result = await finish_event(sheets_client, event_id)
         if result.text:
             await sender.send(result.text)
         elif result.error:
@@ -193,13 +213,17 @@ async def _finish_event(sender: DiscordSender, event_id: str) -> None:
         logger.exception("Discord finish error")
 
 
-async def broadcast_practice(bot: discord.Client) -> None:
+async def broadcast_practice(
+    bot: discord.Client, sheets_client: SheetsClient | None = None
+) -> None:
     """ブロードキャストで練習通知を送信する."""
     sender = DiscordSender(bot=bot, broadcast=True)
-    await _practice(sender, is_broadcast=True)
+    await _practice(sender, sheets_client=sheets_client, is_broadcast=True)
 
 
-async def broadcast_reminder(bot: discord.Client) -> None:
+async def broadcast_reminder(
+    bot: discord.Client, sheets_client: SheetsClient | None = None
+) -> None:
     """ブロードキャストでリマインダーを送信する."""
     sender = DiscordSender(bot=bot, broadcast=True)
-    await _reminder(sender, is_broadcast=True)
+    await _reminder(sender, sheets_client=sheets_client, is_broadcast=True)

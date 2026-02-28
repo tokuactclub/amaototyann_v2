@@ -3,10 +3,11 @@
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import PlainTextResponse
 
 from amaototyann.config import get_settings
+from amaototyann.server.routes.api_admin import require_admin
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ async def test():
     return PlainTextResponse("test success", status_code=200)
 
 
-@router.get("/backupDatabase")
+@router.get("/backupDatabase", dependencies=[Depends(require_admin)])
 async def backup_database(request: Request):
     """データベースを Google Sheets にバックアップするエンドポイント."""
     settings = get_settings()
@@ -72,7 +73,10 @@ async def backup_database(request: Request):
 
 @router.get("/")
 async def root():
-    """app.log を返すエンドポイント."""
+    """app.log を返すエンドポイント (デバッグモードのみ)."""
+    settings = get_settings()
+    if not settings.is_debug:
+        return PlainTextResponse("Not available", status_code=404)
     log_path = Path(__file__).parent.parent.parent / "logs" / "app.log"
     if log_path.exists():
         return PlainTextResponse(log_path.read_text(encoding="utf-8"))

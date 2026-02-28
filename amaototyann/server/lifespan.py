@@ -50,18 +50,17 @@ async def _keep_alive_loop() -> None:
 
     health_url = f"{settings.server_url}/health"
     timeout = aiohttp.ClientTimeout(total=10)
-    while True:
-        try:
-            async with aiohttp.ClientSession() as session:
-                get_request = session.get(health_url, timeout=timeout)
-                async with get_request as response:
+    async with aiohttp.ClientSession() as session:
+        while True:
+            try:
+                async with session.get(health_url, timeout=timeout) as response:
                     if response.status == 200:
                         logger.debug("Keep-alive ping successful")
                     else:
                         logger.warning("Keep-alive ping returned status %s", response.status)
-        except Exception as e:
-            logger.error("Keep-alive ping error: %s", e)
-        await asyncio.sleep(60 * 5)
+            except Exception as e:
+                logger.error("Keep-alive ping error: %s", e)
+            await asyncio.sleep(60 * 5)
 
 
 @asynccontextmanager
@@ -81,7 +80,9 @@ async def lifespan(app: FastAPI):
 
     # 4. SheetsClient 初期化 & 初期データ取得
     if settings.google_service_account_json and settings.google_spreadsheet_id:
-        app.state.sheets_client = SheetsClient(
+        app.state.sheets_client = await asyncio.get_running_loop().run_in_executor(
+            None,
+            SheetsClient,
             settings.google_service_account_json,
             settings.google_spreadsheet_id,
         )
@@ -98,7 +99,7 @@ async def lifespan(app: FastAPI):
                     bot_name=row[1],
                     channel_access_token=row[2],
                     channel_secret=row[3],
-                    gpt_webhook_url=row[4],
+                    gpt_webhook_url=row[4] or None,
                     in_group=row[5].upper() == "TRUE",
                 )
                 for row in bot_data
@@ -120,7 +121,7 @@ async def lifespan(app: FastAPI):
         from amaototyann.platforms.discord.bot import client as discord_client
         from amaototyann.platforms.discord.bot import setup_events
 
-        setup_events()
+        setup_events(app)
         task = asyncio.create_task(discord_client.start(settings.discord_bot_token))
         tasks.append(task)
         logger.info("Discord client starting...")

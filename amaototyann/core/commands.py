@@ -30,20 +30,12 @@ async def get_practice_events(sheets_client: SheetsClient) -> CommandResult:
 
         formatted = []
         for x in events:
-            try:
-                text = messages.PRACTICE.format(
-                    x["place"],
-                    x["start"],
-                    x["end"],
-                    "\n" + x["memo"] if x["memo"] else "",
-                )
-            except Exception:
-                text = messages.PRACTICE.format(
-                    x["place"],
-                    x["start"],
-                    x["end"],
-                    "\n" + x["memo"] if x["memo"] else "",
-                )
+            text = messages.PRACTICE.format(
+                x["place"],
+                x["start"],
+                x["end"],
+                "\n" + x["memo"] if x["memo"] else "",
+            )
             formatted.append(text)
 
         if formatted:

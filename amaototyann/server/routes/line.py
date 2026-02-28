@@ -23,7 +23,8 @@ async def line_webhook(bot_id: int, request: Request):
     try:
         bot_store = request.app.state.bot_store
         group_store = request.app.state.group_store
-        return await handle_line_webhook(request, bot_id, bot_store, group_store)
+        sheets_client = request.app.state.sheets_client
+        return await handle_line_webhook(request, bot_id, bot_store, group_store, sheets_client)
     except HTTPException:
         raise
     except KeyError as err:

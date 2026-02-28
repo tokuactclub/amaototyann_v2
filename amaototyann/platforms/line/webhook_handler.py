@@ -12,6 +12,7 @@ from amaototyann.config import get_settings
 from amaototyann.platforms.line.commands import LineCommandHandler
 from amaototyann.platforms.line.converter import convert_jp_command
 from amaototyann.platforms.line.security import verify_line_signature
+from amaototyann.sheets.client import SheetsClient
 from amaototyann.store.memory import BotStore, GroupStore
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,7 @@ async def handle_line_webhook(
     bot_id: int,
     bot_store: BotStore,
     group_store: GroupStore,
+    sheets_client: SheetsClient,
 ) -> dict:
     """LINE Webhook を処理する."""
     bot = await bot_store.get(bot_id)
@@ -87,7 +89,7 @@ async def handle_line_webhook(
                 logger.info("GPT prefix detected, forwarding to gpt_webhook_url")
                 await _forward_to_gpt_webhook(body, bot.gpt_webhook_url)
             else:
-                await _handle_message(event, bot_id, bot_store, group_store)
+                await _handle_message(event, bot_id, bot_store, group_store, sheets_client)
         elif event_type == "join":
             await _handle_join(event, bot_id, bot_store, group_store)
         elif event_type == "leave":
@@ -103,6 +105,7 @@ async def _handle_message(
     bot_id: int,
     bot_store: BotStore,
     group_store: GroupStore,
+    sheets_client: SheetsClient,
 ) -> None:
     """テキストメッセージを処理する."""
     bot = await bot_store.get(bot_id)
@@ -118,6 +121,7 @@ async def _handle_message(
 
     handler = LineCommandHandler(
         channel_access_token=bot.channel_access_token,
+        sheets_client=sheets_client,
         reply_token=reply_token,
         bot_id=bot_id,
         bot_store=bot_store,
@@ -149,7 +153,7 @@ async def _handle_join(
             api = AsyncMessagingApi(api_client)
             count_resp = await api.get_group_members_count(group_id)
             quota_resp = await api.get_message_quota()
-            remaining = quota_resp.value // count_resp
+            remaining = quota_resp.value // count_resp if count_resp > 0 else quota_resp.value
             await api.reply_message(
                 ReplyMessageRequest(
                     reply_token=reply_token,
