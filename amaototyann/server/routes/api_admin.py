@@ -140,9 +140,9 @@ async def get_practice() -> JSONResponse:
         return JSONResponse(events)
     except HTTPException:
         raise
-    except Exception:
+    except Exception as err:
         logger.exception("get_practice error")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from err
 
 
 @router.post("/practice", status_code=201, dependencies=_AUTH)
@@ -254,9 +254,9 @@ async def put_bots(body: list[dict[str, Any]]) -> JSONResponse:
             logger.warning("fetch_bot_info returned empty after setBotInfo")
 
         return JSONResponse({"ok": True})
-    except Exception:
+    except Exception as err:
         logger.exception("put_bots error")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from err
 
 
 # ---------------------------------------------------------------------------
@@ -272,7 +272,7 @@ async def get_group() -> JSONResponse:
         return JSONResponse(info.model_dump())
     except ValueError as e:
         logger.error("get_group error: %s", e)
-        raise HTTPException(status_code=500, detail="Group info not initialized")
+        raise HTTPException(status_code=500, detail="Group info not initialized") from e
 
 
 @router.put("/group", dependencies=_AUTH)
@@ -294,6 +294,6 @@ async def put_group(body: dict[str, str]) -> JSONResponse:
         return JSONResponse({"ok": True})
     except HTTPException:
         raise
-    except Exception:
+    except Exception as err:
         logger.exception("put_group error")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from err

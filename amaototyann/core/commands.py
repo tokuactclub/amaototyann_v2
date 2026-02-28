@@ -1,5 +1,6 @@
 """プラットフォーム非依存のビジネスロジック."""
 
+import contextlib
 import logging
 from datetime import UTC, datetime, timedelta, timezone
 
@@ -107,7 +108,7 @@ async def finish_event(event_id: str) -> CommandResult:
 
 
 async def get_all_reminders() -> CommandResult:
-    """全リマインダーを取得する（管理画面用、フィルタなし）."""
+    """全リマインダーを取得する(管理画面用、フィルタなし)."""
     try:
         events = await gas_request({"cmd": "reminder"})
         if not isinstance(events, list):
@@ -117,12 +118,10 @@ async def get_all_reminders() -> CommandResult:
         for event in events:
             if event.get("finish") == "true":
                 continue
-            try:
+            with contextlib.suppress(ValueError, KeyError):
                 event["date"] = datetime.fromisoformat(
                     event["date"].replace("Z", "+00:00")
                 ).strftime("%Y-%m-%d")
-            except (ValueError, KeyError):
-                pass
             result_events.append(event)
 
         if result_events:
@@ -133,19 +132,23 @@ async def get_all_reminders() -> CommandResult:
         return CommandResult(error=str(e))
 
 
-async def add_practice(date: str, place: str, start_time: str, end_time: str, memo: str = "") -> CommandResult:
+async def add_practice(
+    date: str, place: str, start_time: str, end_time: str, memo: str = ""
+) -> CommandResult:
     """練習予定を追加する."""
     try:
-        response = await gas_request({
-            "cmd": "addPractice",
-            "options": {
-                "date": date,
-                "place": place,
-                "startTime": start_time,
-                "endTime": end_time,
-                "memo": memo,
-            },
-        })
+        response = await gas_request(
+            {
+                "cmd": "addPractice",
+                "options": {
+                    "date": date,
+                    "place": place,
+                    "startTime": start_time,
+                    "endTime": end_time,
+                    "memo": memo,
+                },
+            }
+        )
         if response == "success":
             return CommandResult(text="練習予定を追加しました")
         return CommandResult(error="練習予定の追加に失敗しました")
@@ -154,20 +157,29 @@ async def add_practice(date: str, place: str, start_time: str, end_time: str, me
         return CommandResult(error=str(e))
 
 
-async def add_reminder(deadline: str, role: str, task: str, person: str = "", memo: str = "", remind_date: str = "7,3,1") -> CommandResult:
+async def add_reminder(
+    deadline: str,
+    role: str,
+    task: str,
+    person: str = "",
+    memo: str = "",
+    remind_date: str = "7,3,1",
+) -> CommandResult:
     """リマインダーを追加する."""
     try:
-        response = await gas_request({
-            "cmd": "addReminder",
-            "options": {
-                "deadline": deadline,
-                "role": role,
-                "person": person,
-                "task": task,
-                "memo": memo,
-                "remindDate": remind_date,
-            },
-        })
+        response = await gas_request(
+            {
+                "cmd": "addReminder",
+                "options": {
+                    "deadline": deadline,
+                    "role": role,
+                    "person": person,
+                    "task": task,
+                    "memo": memo,
+                    "remindDate": remind_date,
+                },
+            }
+        )
         if response == "success":
             return CommandResult(text="リマインダーを追加しました")
         return CommandResult(error="リマインダーの追加に失敗しました")

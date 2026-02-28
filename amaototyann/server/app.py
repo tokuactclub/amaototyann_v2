@@ -35,7 +35,7 @@ def create_app() -> FastAPI:
     except Exception:
         pass
 
-    # SPA ルーターは最後に登録する（catch-all パターンが API ルートを奪わないように）
+    # SPA ルーターは最後に登録する(catch-all パターンが API ルートを奪わないように)
     from amaototyann.server.routes.spa import router as spa_router
 
     app.include_router(spa_router)
