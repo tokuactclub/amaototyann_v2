@@ -1,14 +1,15 @@
-import { useState, useEffect, type FormEvent } from 'react'
+import { useState, useEffect, useCallback, type FormEvent } from 'react'
 import { api } from '../api/client'
-import type { PracticeEvent } from '../types'
+import type { PracticeEvent, PracticeDefault } from '../types'
 
 export default function PracticeList() {
   const [events, setEvents] = useState<PracticeEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [practiceDefaults, setPracticeDefaults] = useState<PracticeDefault[]>([])
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     setLoading(true)
     try {
       const data = await api.getPractice()
@@ -18,14 +19,26 @@ export default function PracticeList() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  useEffect(() => { fetchEvents() }, [])
+  const fetchDefaults = useCallback(async () => {
+    try {
+      const defaults = await api.getPracticeDefaults()
+      setPracticeDefaults(Array.isArray(defaults) ? defaults : [])
+    } catch {
+      // Non-critical: fall back to empty defaults silently
+    }
+  }, [])
 
-  const handleDelete = async (eventId: string) => {
+  useEffect(() => {
+    fetchEvents()
+    fetchDefaults()
+  }, [fetchEvents, fetchDefaults])
+
+  const handleDelete = async (eventId: number) => {
     if (!confirm('この練習予定を削除しますか？')) return
     try {
-      await api.deletePractice(eventId)
+      await api.deletePractice(String(eventId))
       fetchEvents()
     } catch (e) {
       alert(e instanceof Error ? e.message : '削除に失敗しました')
@@ -41,7 +54,12 @@ export default function PracticeList() {
         </button>
       </div>
 
-      {showForm && <PracticeForm onSuccess={() => { setShowForm(false); fetchEvents() }} />}
+      {showForm && (
+        <PracticeForm
+          practiceDefaults={practiceDefaults}
+          onSuccess={() => { setShowForm(false); fetchEvents() }}
+        />
+      )}
 
       {error && <p style={styles.error}>{error}</p>}
       {loading ? (
@@ -68,7 +86,7 @@ export default function PracticeList() {
                   <td style={styles.td}>{event.end}</td>
                   <td style={styles.td}>{event.memo || '-'}</td>
                   <td style={styles.td}>
-                    <button onClick={() => handleDelete('')} style={styles.deleteButton}>
+                    <button onClick={() => handleDelete(event.id)} style={styles.deleteButton}>
                       削除
                     </button>
                   </td>
@@ -82,12 +100,21 @@ export default function PracticeList() {
   )
 }
 
-function PracticeForm({ onSuccess }: { onSuccess: () => void }) {
+function PracticeForm({
+  practiceDefaults,
+  onSuccess,
+}: {
+  practiceDefaults: PracticeDefault[]
+  onSuccess: () => void
+}) {
+  const currentMonth = new Date().getMonth() + 1
+  const monthDefault = practiceDefaults.find(d => d.month === currentMonth && d.enabled)
+
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
-    place: '',
-    start_time: '14:00',
-    end_time: '17:00',
+    place: monthDefault?.place ?? '',
+    start_time: monthDefault?.start_time ?? '14:00',
+    end_time: monthDefault?.end_time ?? '17:00',
     memo: '',
   })
   const [submitting, setSubmitting] = useState(false)

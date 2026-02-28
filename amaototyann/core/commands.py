@@ -145,9 +145,9 @@ async def add_reminder(
     deadline: str,
     role: str,
     task: str,
+    remind_date: str,
     person: str = "",
     memo: str = "",
-    remind_date: str = "7,3,1",
 ) -> CommandResult:
     """リマインダーを追加する."""
     try:

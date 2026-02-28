@@ -21,4 +21,4 @@ class ReminderCreate(BaseModel):
     person: str = ""
     task: str = Field(min_length=1)
     memo: str = ""
-    remind_date: str = "7,3,1"
+    remind_date: str

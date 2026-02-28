@@ -5,6 +5,7 @@ import LoginForm from './components/LoginForm'
 import PracticeList from './components/PracticeList'
 import ReminderList from './components/ReminderList'
 import BotSettings from './components/BotSettings'
+import SettingsManager from './components/SettingsManager'
 
 function App() {
   const { isAuthenticated, isLoading, login, logout } = useAuth()
@@ -30,6 +31,7 @@ function App() {
             <Route path="/admin/practice" element={<PracticeList />} />
             <Route path="/admin/reminder" element={<ReminderList />} />
             <Route path="/admin/settings" element={<BotSettings />} />
+            <Route path="/admin/general-settings" element={<SettingsManager />} />
             <Route path="/admin" element={<Navigate to="/admin/practice" replace />} />
             <Route path="*" element={<Navigate to="/admin/practice" replace />} />
           </Route>

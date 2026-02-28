@@ -121,6 +121,15 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#333',
     outline: 'none',
   },
+  select: {
+    border: '1px solid #e2e8f0',
+    borderRadius: '4px',
+    padding: '6px 10px',
+    fontSize: '14px',
+    color: '#333',
+    outline: 'none',
+    background: '#fff',
+  },
   textarea: {
     border: '1px solid #e2e8f0',
     borderRadius: '4px',
@@ -173,21 +182,24 @@ const styles: Record<string, React.CSSProperties> = {
   },
 }
 
-const defaultForm: ReminderCreateRequest = {
-  role: '',
-  person: '',
-  task: '',
-  deadline: '',
-  memo: '',
-  remind_date: '7,3,1',
-}
+const OTHER_VALUE = '__other__'
 
 export default function ReminderList() {
   const [reminders, setReminders] = useState<ReminderEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState<ReminderCreateRequest>(defaultForm)
+  const [members, setMembers] = useState<string[]>([])
+  const [defaultRemindDate, setDefaultRemindDate] = useState('7,3,1')
+  const [form, setForm] = useState<ReminderCreateRequest>({
+    role: '',
+    person: '',
+    task: '',
+    deadline: '',
+    memo: '',
+    remind_date: '7,3,1',
+  })
+  const [personSelectValue, setPersonSelectValue] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -204,9 +216,25 @@ export default function ReminderList() {
     }
   }, [])
 
+  const fetchInitialData = useCallback(async () => {
+    try {
+      const [membersData, appSettings] = await Promise.all([
+        api.getMembers(),
+        api.getAppSettings(),
+      ])
+      setMembers(membersData)
+      const remindDate = appSettings['default_remind_date'] ?? '7,3,1'
+      setDefaultRemindDate(remindDate)
+      setForm(prev => ({ ...prev, remind_date: remindDate }))
+    } catch {
+      // Non-critical: fall back to defaults silently
+    }
+  }, [])
+
   useEffect(() => {
     fetchReminders()
-  }, [fetchReminders])
+    fetchInitialData()
+  }, [fetchReminders, fetchInitialData])
 
   const handleFinish = async (id: string) => {
     if (!confirm('このリマインダーを完了にしますか？')) return
@@ -232,13 +260,35 @@ export default function ReminderList() {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
+  const handlePersonSelectChange = (value: string) => {
+    setPersonSelectValue(value)
+    if (value !== OTHER_VALUE) {
+      setForm(prev => ({ ...prev, person: value }))
+    } else {
+      setForm(prev => ({ ...prev, person: '' }))
+    }
+  }
+
+  const resetForm = () => {
+    setForm({
+      role: '',
+      person: '',
+      task: '',
+      deadline: '',
+      memo: '',
+      remind_date: defaultRemindDate,
+    })
+    setPersonSelectValue('')
+    setFormError(null)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
     setFormError(null)
     try {
       await api.createReminder(form)
-      setForm(defaultForm)
+      resetForm()
       setShowForm(false)
       await fetchReminders()
     } catch (e) {
@@ -290,7 +340,7 @@ export default function ReminderList() {
                   reminders.map(r => (
                     <tr key={r.id} style={r.finish ? styles.finishedRow : undefined}>
                       <td style={styles.td}>{r.task}</td>
-                      <td style={styles.td}>{r.job}</td>
+                      <td style={styles.td}>{r.role}</td>
                       <td style={styles.td}>{r.person}</td>
                       <td style={styles.td}>{r.date}</td>
                       <td style={styles.td}>{r.memo}</td>
@@ -337,14 +387,28 @@ export default function ReminderList() {
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>担当者</label>
-                <input
-                  style={styles.input}
-                  type="text"
-                  value={form.person}
-                  onChange={e => handleFormChange('person', e.target.value)}
-                  placeholder="例: 山田太郎"
-                  required
-                />
+                <select
+                  style={styles.select}
+                  value={personSelectValue}
+                  onChange={e => handlePersonSelectChange(e.target.value)}
+                  required={personSelectValue !== OTHER_VALUE}
+                >
+                  <option value="">選択してください</option>
+                  {members.map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                  <option value={OTHER_VALUE}>その他 (手入力)</option>
+                </select>
+                {personSelectValue === OTHER_VALUE && (
+                  <input
+                    style={{ ...styles.input, marginTop: '6px' }}
+                    type="text"
+                    value={form.person}
+                    onChange={e => handleFormChange('person', e.target.value)}
+                    placeholder="例: 山田太郎"
+                    required
+                  />
+                )}
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>タスク</label>
@@ -394,7 +458,7 @@ export default function ReminderList() {
               <button
                 type="button"
                 style={styles.cancelButton}
-                onClick={() => { setShowForm(false); setFormError(null); setForm(defaultForm) }}
+                onClick={() => { setShowForm(false); resetForm() }}
               >
                 キャンセル
               </button>

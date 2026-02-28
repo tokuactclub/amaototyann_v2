@@ -1,4 +1,4 @@
-import type { PracticeEvent, PracticeCreateRequest, ReminderEvent, ReminderCreateRequest, BotInfo, GroupInfo } from '../types'
+import type { PracticeEvent, PracticeCreateRequest, ReminderEvent, ReminderCreateRequest, BotInfo, GroupInfo, PracticeDefault } from '../types'
 
 const API_BASE = '/api/admin'
 
@@ -90,5 +90,33 @@ export const api = {
     request<{ text?: string; error?: string }>('/group', {
       method: 'PUT',
       body: JSON.stringify(data),
+    }),
+
+  // Settings
+  getMembers: () =>
+    request<string[]>('/settings/members'),
+
+  updateMembers: (members: string[]) =>
+    request<void>('/settings/members', {
+      method: 'PUT',
+      body: JSON.stringify({ members }),
+    }),
+
+  getPracticeDefaults: () =>
+    request<PracticeDefault[]>('/settings/practice-defaults'),
+
+  updatePracticeDefaults: (defaults: PracticeDefault[]) =>
+    request<void>('/settings/practice-defaults', {
+      method: 'PUT',
+      body: JSON.stringify({ defaults }),
+    }),
+
+  getAppSettings: () =>
+    request<Record<string, string>>('/settings/app'),
+
+  updateAppSettings: (settings: Record<string, string>) =>
+    request<void>('/settings/app', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
     }),
 }

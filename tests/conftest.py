@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
 from amaototyann.config import get_settings
 from amaototyann.store.memory import BotStore, GroupStore
+from amaototyann.store.settings import SettingsStore
 
 # ---------------------------------------------------------------------------
 # Environment / settings isolation
@@ -67,6 +68,12 @@ def bot_store() -> BotStore:
 def group_store() -> GroupStore:
     """Return a fresh, empty GroupStore for each test."""
     return GroupStore()
+
+
+@pytest.fixture
+def settings_store() -> SettingsStore:
+    """Return a fresh, empty SettingsStore for each test."""
+    return SettingsStore()
 
 
 # ---------------------------------------------------------------------------

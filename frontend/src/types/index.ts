@@ -1,4 +1,5 @@
 export interface PracticeEvent {
+  id: number
   place: string
   start: string
   end: string
@@ -7,7 +8,7 @@ export interface PracticeEvent {
 
 export interface ReminderEvent {
   id: string
-  job: string
+  role: string
   person: string
   task: string
   memo: string
@@ -50,4 +51,16 @@ export interface GroupInfo {
 export interface ApiResponse<T = unknown> {
   data?: T
   error?: string
+}
+
+export interface PracticeDefault {
+  month: number
+  enabled: boolean
+  place: string
+  start_time: string
+  end_time: string
+}
+
+export interface AppSettings {
+  [key: string]: string
 }

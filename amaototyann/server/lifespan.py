@@ -10,8 +10,10 @@ from fastapi import FastAPI
 from amaototyann.config import get_settings
 from amaototyann.logging_config import configure_logging
 from amaototyann.models.bot import BotInfo, GroupInfo
+from amaototyann.models.settings import PracticeDefault
 from amaototyann.sheets.client import SheetsClient
 from amaototyann.store.memory import BotStore, GroupStore
+from amaototyann.store.settings import SettingsStore
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,17 @@ async def _backup_loop(app: FastAPI) -> None:
                 data = await app.state.group_store.dump_for_backup()
                 if await app.state.sheets_client.set_group_info(data):
                     await app.state.group_store.mark_clean()
+
+            # Settings backup
+            settings_store: SettingsStore = app.state.settings_store
+            if settings_store.is_dirty:
+                backup = await settings_store.dump_for_backup()
+                await app.state.sheets_client.set_members(backup["members"])
+                pd_dicts = backup["practiceDefaults"]
+                await app.state.sheets_client.set_practice_defaults(pd_dicts)
+                # app_settings are updated individually, no bulk backup needed
+                await settings_store.mark_clean()
+                logger.info("settings_store をバックアップしました")
         except Exception as e:
             logger.error("Backup error: %s", e)
 
@@ -77,6 +90,7 @@ async def lifespan(app: FastAPI):
     # 3. app.state 初期化
     app.state.bot_store = BotStore()
     app.state.group_store = GroupStore()
+    app.state.settings_store = SettingsStore()
     app.state.sheets_client = None
 
     # 4. SheetsClient 初期化 & 初期データ取得
@@ -115,6 +129,13 @@ async def lifespan(app: FastAPI):
             await app.state.group_store.load(group)
         else:
             logger.warning("No group info loaded from Sheets")
+
+        # Settings data
+        members = await app.state.sheets_client.get_members()
+        practice_defaults_raw = await app.state.sheets_client.get_practice_defaults()
+        practice_defaults = [PracticeDefault(**d) for d in practice_defaults_raw]
+        app_settings = await app.state.sheets_client.get_app_settings()
+        await app.state.settings_store.load(members, practice_defaults, app_settings)
 
     # 5. Discord client の起動 (オプション)
     tasks: list[asyncio.Task] = []

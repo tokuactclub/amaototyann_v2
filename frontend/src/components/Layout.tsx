@@ -21,6 +21,9 @@ export default function Layout({ onLogout }: Props) {
         <NavLink to="/admin/settings" style={({ isActive }) => ({...styles.navLink, ...(isActive ? styles.navLinkActive : {})})}>
           Bot 設定
         </NavLink>
+        <NavLink to="/admin/general-settings" style={({ isActive }) => ({...styles.navLink, ...(isActive ? styles.navLinkActive : {})})}>
+          設定管理
+        </NavLink>
       </nav>
       <main style={styles.main}>
         <Outlet />

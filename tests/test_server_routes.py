@@ -23,10 +23,13 @@ import pytest
 from fastapi import FastAPI
 
 from amaototyann.models.bot import BotInfo, GroupInfo
+from amaototyann.models.settings import PracticeDefault
 from amaototyann.server.routes.admin import router as admin_router
+from amaototyann.server.routes.api_admin import router as api_admin_router
 from amaototyann.server.routes.line import router as line_router
 from amaototyann.server.routes.push import router as push_router
 from amaototyann.store.memory import BotStore, GroupStore
+from amaototyann.store.settings import SettingsStore
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -71,7 +74,12 @@ async def _null_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
 
-def _build_test_app(bot_store: BotStore, group_store: GroupStore) -> FastAPI:
+def _build_test_app(
+    bot_store: BotStore,
+    group_store: GroupStore,
+    settings_store: SettingsStore | None = None,
+    sheets_client=None,
+) -> FastAPI:
     """テスト用 FastAPI アプリを組み立てる.
 
     * null_lifespan でサービス起動をスキップ
@@ -79,12 +87,14 @@ def _build_test_app(bot_store: BotStore, group_store: GroupStore) -> FastAPI:
     """
     app = FastAPI(lifespan=_null_lifespan, redirect_slashes=False)
     app.include_router(admin_router)
+    app.include_router(api_admin_router)
     app.include_router(push_router)
     app.include_router(line_router)
     # Set app.state for dependency injection
     app.state.bot_store = bot_store
     app.state.group_store = group_store
-    app.state.sheets_client = None
+    app.state.settings_store = settings_store if settings_store is not None else SettingsStore()
+    app.state.sheets_client = sheets_client
     return app
 
 
@@ -472,3 +482,393 @@ class TestLineWebhookEndpoint:
 
         assert response.status_code == 200
         mock_handler_cls.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# /api/admin/settings/*
+# ---------------------------------------------------------------------------
+
+
+def _make_settings_store_with_data() -> SettingsStore:
+    """Pre-populated SettingsStore を返すヘルパー."""
+    return SettingsStore()
+
+
+def _make_mock_sheets_client_for_settings() -> AsyncMock:
+    """設定エンドポイントで使う sheets_client モックを生成する."""
+    mock = AsyncMock()
+    mock.set_members = AsyncMock(return_value=True)
+    mock.set_practice_defaults = AsyncMock(return_value=True)
+    mock.set_app_setting = AsyncMock(return_value=True)
+    return mock
+
+
+class TestSettingsRoutes:
+    """Test /api/admin/settings/* endpoints."""
+
+    # -----------------------------------------------------------------------
+    # GET /api/admin/settings/members
+    # -----------------------------------------------------------------------
+
+    async def test_get_members_returns_200_with_list(self) -> None:
+        """認証なし (admin_password=None) で GET /settings/members が 200 を返す."""
+        store = SettingsStore()
+        await store.load(["Alice", "Bob"], [], {})
+
+        mock_settings = MagicMock()
+        mock_settings.admin_password = None  # debug mode — skip auth
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(BotStore(), GroupStore(), settings_store=store)
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.get("/api/admin/settings/members")
+
+        assert response.status_code == 200
+
+    async def test_get_members_without_auth_returns_401(self) -> None:
+        """admin_password が設定されているとき、Cookie なしで 401 が返る."""
+        mock_settings = MagicMock()
+        mock_settings.admin_password = "secret"
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(BotStore(), GroupStore())
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.get("/api/admin/settings/members")
+
+        assert response.status_code == 401
+
+    async def test_get_members_returns_member_list(self) -> None:
+        """GET /settings/members はメンバーリストを JSON 配列で返す."""
+        store = SettingsStore()
+        await store.load(["Alice", "Bob", "Carol"], [], {})
+
+        mock_settings = MagicMock()
+        mock_settings.admin_password = None
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(BotStore(), GroupStore(), settings_store=store)
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.get("/api/admin/settings/members")
+
+        assert response.status_code == 200
+        assert response.json() == ["Alice", "Bob", "Carol"]
+
+    async def test_get_members_empty_store_returns_empty_list(self) -> None:
+        """空の SettingsStore で GET /settings/members は [] を返す."""
+        mock_settings = MagicMock()
+        mock_settings.admin_password = None
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(BotStore(), GroupStore())
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.get("/api/admin/settings/members")
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    # -----------------------------------------------------------------------
+    # PUT /api/admin/settings/members
+    # -----------------------------------------------------------------------
+
+    async def test_put_members_without_auth_returns_401(self) -> None:
+        """admin_password が設定されているとき、Cookie なしで PUT も 401."""
+        mock_settings = MagicMock()
+        mock_settings.admin_password = "secret"
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(BotStore(), GroupStore())
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.put(
+                    "/api/admin/settings/members", json={"members": ["Alice"]}
+                )
+
+        assert response.status_code == 401
+
+    async def test_put_members_updates_store(self) -> None:
+        """PUT /settings/members が sheets_client を呼び、store を更新し 200 を返す."""
+        store = SettingsStore()
+        mock_sheets = _make_mock_sheets_client_for_settings()
+        mock_settings = MagicMock()
+        mock_settings.admin_password = None
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(
+                BotStore(), GroupStore(), settings_store=store, sheets_client=mock_sheets
+            )
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.put(
+                    "/api/admin/settings/members", json={"members": ["Alice", "Bob"]}
+                )
+
+        assert response.status_code == 200
+        assert response.json() == {"ok": True}
+        mock_sheets.set_members.assert_awaited_once_with(["Alice", "Bob"])
+        assert await store.get_members() == ["Alice", "Bob"]
+
+    async def test_put_members_sheets_failure_returns_500(self) -> None:
+        """sheets_client.set_members が False を返すと 500 が返る."""
+        mock_sheets = AsyncMock()
+        mock_sheets.set_members = AsyncMock(return_value=False)
+        mock_settings = MagicMock()
+        mock_settings.admin_password = None
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(BotStore(), GroupStore(), sheets_client=mock_sheets)
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.put(
+                    "/api/admin/settings/members", json={"members": ["Alice"]}
+                )
+
+        assert response.status_code == 500
+
+    async def test_put_members_no_sheets_client_returns_503(self) -> None:
+        """sheets_client が None のとき 503 が返る."""
+        mock_settings = MagicMock()
+        mock_settings.admin_password = None
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(BotStore(), GroupStore(), sheets_client=None)
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.put(
+                    "/api/admin/settings/members", json={"members": ["Alice"]}
+                )
+
+        assert response.status_code == 503
+
+    # -----------------------------------------------------------------------
+    # GET /api/admin/settings/practice-defaults
+    # -----------------------------------------------------------------------
+
+    async def test_get_practice_defaults_returns_200(self) -> None:
+        """GET /settings/practice-defaults が 200 を返す."""
+        store = SettingsStore()
+        defaults = [
+            PracticeDefault(
+                month=1, enabled=True, place="場所1", start_time="14:00", end_time="17:00"
+            )
+        ]
+        await store.load([], defaults, {})
+
+        mock_settings = MagicMock()
+        mock_settings.admin_password = None
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(BotStore(), GroupStore(), settings_store=store)
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.get("/api/admin/settings/practice-defaults")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert isinstance(body, list)
+        assert len(body) == 1
+        assert body[0]["month"] == 1
+
+    async def test_get_practice_defaults_without_auth_returns_401(self) -> None:
+        """認証なしで GET /settings/practice-defaults は 401 を返す."""
+        mock_settings = MagicMock()
+        mock_settings.admin_password = "secret"
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(BotStore(), GroupStore())
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.get("/api/admin/settings/practice-defaults")
+
+        assert response.status_code == 401
+
+    # -----------------------------------------------------------------------
+    # PUT /api/admin/settings/practice-defaults
+    # -----------------------------------------------------------------------
+
+    async def test_put_practice_defaults_updates_store(self) -> None:
+        """PUT /settings/practice-defaults が store を更新し 200 を返す."""
+        store = SettingsStore()
+        mock_sheets = _make_mock_sheets_client_for_settings()
+        mock_settings = MagicMock()
+        mock_settings.admin_password = None
+
+        defaults_payload = [
+            {
+                "month": 1,
+                "enabled": True,
+                "place": "場所A",
+                "start_time": "14:00",
+                "end_time": "17:00",
+            }
+        ]
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(
+                BotStore(), GroupStore(), settings_store=store, sheets_client=mock_sheets
+            )
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.put(
+                    "/api/admin/settings/practice-defaults", json={"defaults": defaults_payload}
+                )
+
+        assert response.status_code == 200
+        assert response.json() == {"ok": True}
+        mock_sheets.set_practice_defaults.assert_awaited_once_with(defaults_payload)
+        new_defaults = await store.get_practice_defaults()
+        assert len(new_defaults) == 1
+        assert new_defaults[0].place == "場所A"
+
+    async def test_put_practice_defaults_sheets_failure_returns_500(self) -> None:
+        """sheets_client.set_practice_defaults が False のとき 500 が返る."""
+        mock_sheets = AsyncMock()
+        mock_sheets.set_practice_defaults = AsyncMock(return_value=False)
+        mock_settings = MagicMock()
+        mock_settings.admin_password = None
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(BotStore(), GroupStore(), sheets_client=mock_sheets)
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.put(
+                    "/api/admin/settings/practice-defaults",
+                    json={
+                        "defaults": [
+                            {
+                                "month": 1,
+                                "enabled": True,
+                                "place": "",
+                                "start_time": "14:00",
+                                "end_time": "17:00",
+                            }
+                        ]
+                    },
+                )
+
+        assert response.status_code == 500
+
+    # -----------------------------------------------------------------------
+    # GET /api/admin/settings/app
+    # -----------------------------------------------------------------------
+
+    async def test_get_app_settings_returns_200(self) -> None:
+        """GET /settings/app が全アプリ設定を返す."""
+        store = SettingsStore()
+        await store.load([], [], {"remind_hour": "8", "timezone": "Asia/Tokyo"})
+
+        mock_settings = MagicMock()
+        mock_settings.admin_password = None
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(BotStore(), GroupStore(), settings_store=store)
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.get("/api/admin/settings/app")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["remind_hour"] == "8"
+        assert body["timezone"] == "Asia/Tokyo"
+
+    async def test_get_app_settings_without_auth_returns_401(self) -> None:
+        """認証なしで GET /settings/app は 401 を返す."""
+        mock_settings = MagicMock()
+        mock_settings.admin_password = "secret"
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(BotStore(), GroupStore())
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.get("/api/admin/settings/app")
+
+        assert response.status_code == 401
+
+    # -----------------------------------------------------------------------
+    # PUT /api/admin/settings/app
+    # -----------------------------------------------------------------------
+
+    async def test_put_app_settings_updates_store(self) -> None:
+        """PUT /settings/app が各キーを sheets_client と store に書き込み 200 を返す."""
+        store = SettingsStore()
+        mock_sheets = _make_mock_sheets_client_for_settings()
+        mock_settings = MagicMock()
+        mock_settings.admin_password = None
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(
+                BotStore(), GroupStore(), settings_store=store, sheets_client=mock_sheets
+            )
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.put(
+                    "/api/admin/settings/app", json={"remind_hour": "9", "timezone": "Asia/Tokyo"}
+                )
+
+        assert response.status_code == 200
+        assert response.json() == {"ok": True}
+        assert mock_sheets.set_app_setting.await_count == 2
+        assert store.get_setting("remind_hour") == "9"
+        assert store.get_setting("timezone") == "Asia/Tokyo"
+
+    async def test_put_app_settings_sheets_failure_returns_500(self) -> None:
+        """sheets_client.set_app_setting が False のとき 500 が返る."""
+        mock_sheets = AsyncMock()
+        mock_sheets.set_app_setting = AsyncMock(return_value=False)
+        mock_settings = MagicMock()
+        mock_settings.admin_password = None
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(BotStore(), GroupStore(), sheets_client=mock_sheets)
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.put("/api/admin/settings/app", json={"remind_hour": "9"})
+
+        assert response.status_code == 500
+
+    async def test_put_app_settings_without_auth_returns_401(self) -> None:
+        """認証なしで PUT /settings/app は 401 が返る."""
+        mock_settings = MagicMock()
+        mock_settings.admin_password = "secret"
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(BotStore(), GroupStore())
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.put("/api/admin/settings/app", json={"remind_hour": "9"})
+
+        assert response.status_code == 401
+
+    async def test_put_app_settings_no_sheets_client_returns_503(self) -> None:
+        """sheets_client が None のとき PUT /settings/app は 503 を返す."""
+        mock_settings = MagicMock()
+        mock_settings.admin_password = None
+
+        with patch("amaototyann.server.routes.api_admin.get_settings", return_value=mock_settings):
+            app = _build_test_app(BotStore(), GroupStore(), sheets_client=None)
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.put("/api/admin/settings/app", json={"remind_hour": "9"})
+
+        assert response.status_code == 503

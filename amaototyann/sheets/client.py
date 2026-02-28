@@ -14,7 +14,15 @@ logger = logging.getLogger(__name__)
 
 _SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
-_SHEET_NAMES = ("practice", "reminder", "bot_info", "group_info")
+_SHEET_NAMES = (
+    "practice",
+    "reminder",
+    "bot_info",
+    "group_info",
+    "members",
+    "practice_defaults",
+    "app_settings",
+)
 
 
 class SheetsClient:
@@ -246,4 +254,114 @@ class SheetsClient:
             return True
         except Exception:
             logger.exception("set_group_info 失敗")
+            return False
+
+    # ------------------------------------------------------------------
+    # members シート
+    # ------------------------------------------------------------------
+
+    async def get_members(self) -> list[str]:
+        """メンバー名一覧を取得する."""
+        try:
+            rows = await self._run_sync(self._ws["members"].get_all_values)
+            return [row[0] for row in rows if row and row[0]]
+        except Exception:
+            logger.exception("get_members 失敗")
+            return []
+
+    async def set_members(self, names: list[str]) -> bool:
+        """メンバー名一覧を全件置換する."""
+        try:
+            ws = self._ws["members"]
+            await self._run_sync(ws.clear)
+            if names:
+                cells = [[name] for name in names]
+                await self._run_sync(ws.update, "A1", cells)
+            logger.info("メンバーを更新 (%d 件)", len(names))
+            return True
+        except Exception:
+            logger.exception("set_members 失敗")
+            return False
+
+    # ------------------------------------------------------------------
+    # practice_defaults シート
+    # ------------------------------------------------------------------
+
+    async def get_practice_defaults(self) -> list[dict]:
+        """月別練習デフォルト設定を全件取得する.
+
+        返却キー: month, enabled, place, start_time, end_time
+        """
+        try:
+            rows = await self._run_sync(self._ws["practice_defaults"].get_all_values)
+            results = []
+            for row in rows:
+                if len(row) >= 5:
+                    results.append(
+                        {
+                            "month": int(row[0]),
+                            "enabled": row[1].upper() == "TRUE",
+                            "place": row[2],
+                            "start_time": row[3],
+                            "end_time": row[4],
+                        }
+                    )
+            return results
+        except Exception:
+            logger.exception("get_practice_defaults 失敗")
+            return []
+
+    async def set_practice_defaults(self, data: list[dict]) -> bool:
+        """月別練習デフォルト設定を全件置換する."""
+        try:
+            ws = self._ws["practice_defaults"]
+            await self._run_sync(ws.clear)
+            if data:
+                cells = [
+                    [
+                        str(d["month"]),
+                        str(d["enabled"]).upper(),
+                        d["place"],
+                        d["start_time"],
+                        d["end_time"],
+                    ]
+                    for d in data
+                ]
+                await self._run_sync(ws.update, "A1", cells)
+            logger.info("練習デフォルトを更新 (%d 件)", len(data))
+            return True
+        except Exception:
+            logger.exception("set_practice_defaults 失敗")
+            return False
+
+    # ------------------------------------------------------------------
+    # app_settings シート
+    # ------------------------------------------------------------------
+
+    async def get_app_settings(self) -> dict[str, str]:
+        """アプリ設定を全件取得する (key → value マップ)."""
+        try:
+            rows = await self._run_sync(self._ws["app_settings"].get_all_values)
+            return {row[0]: row[1] for row in rows if len(row) >= 2 and row[0]}
+        except Exception:
+            logger.exception("get_app_settings 失敗")
+            return {}
+
+    async def set_app_setting(self, key: str, value: str) -> bool:
+        """アプリ設定を 1 件更新する. キーが存在しない場合は末尾に追記する."""
+        try:
+            ws = self._ws["app_settings"]
+            rows = await self._run_sync(ws.get_all_values)
+            for i, row in enumerate(rows):
+                if row and row[0] == key:
+                    await self._run_sync(ws.update_cell, i + 1, 2, value)
+                    logger.info("アプリ設定を更新: %s = %s", key, value)
+                    return True
+            # キーが未存在のため末尾に追記
+            next_row = len(rows) + 1
+            await self._run_sync(ws.update, f"A{next_row}", [[key, value]])
+            logger.info("アプリ設定を追加: %s = %s", key, value)
+            return True
+        except Exception:
+            logger.exception("set_app_setting 失敗: %s", key)
             return False

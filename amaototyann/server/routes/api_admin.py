@@ -19,6 +19,7 @@ from amaototyann.core.commands import (
 )
 from amaototyann.models.bot import BotInfo
 from amaototyann.models.schedule import PracticeCreate, ReminderCreate
+from amaototyann.models.settings import PracticeDefault
 
 logger = logging.getLogger(__name__)
 
@@ -316,3 +317,63 @@ async def put_group(request: Request, body: dict[str, str]) -> JSONResponse:
     except Exception as err:
         logger.exception("put_group error")
         raise HTTPException(status_code=500, detail="Internal server error") from err
+
+
+# ---------------------------------------------------------------------------
+# 設定エンドポイント
+# ---------------------------------------------------------------------------
+
+
+@router.get("/settings/members", dependencies=_AUTH)
+async def get_members(request: Request) -> JSONResponse:
+    """メンバー一覧を取得する."""
+    members = await request.app.state.settings_store.get_members()
+    return JSONResponse(members)
+
+
+@router.put("/settings/members", dependencies=_AUTH)
+async def update_members(request: Request, body: dict[str, Any]) -> JSONResponse:
+    """メンバー一覧を更新し、Google Sheets と settings_store を同期する."""
+    names = body.get("members", [])
+    sheets_client = _require_sheets_client(request)
+    if not await sheets_client.set_members(names):
+        raise HTTPException(status_code=500, detail="Failed to update members")
+    await request.app.state.settings_store.set_members(names)
+    return JSONResponse({"ok": True})
+
+
+@router.get("/settings/practice-defaults", dependencies=_AUTH)
+async def get_practice_defaults(request: Request) -> JSONResponse:
+    """練習デフォルト設定を取得する."""
+    defaults = await request.app.state.settings_store.get_practice_defaults()
+    return JSONResponse([d.model_dump() for d in defaults])
+
+
+@router.put("/settings/practice-defaults", dependencies=_AUTH)
+async def update_practice_defaults(request: Request, body: dict[str, Any]) -> JSONResponse:
+    """練習デフォルト設定を更新し、Google Sheets と settings_store を同期する."""
+    defaults_data = body.get("defaults", [])
+    sheets_client = _require_sheets_client(request)
+    if not await sheets_client.set_practice_defaults(defaults_data):
+        raise HTTPException(status_code=500, detail="Failed to update practice defaults")
+    practice_defaults = [PracticeDefault(**d) for d in defaults_data]
+    await request.app.state.settings_store.set_practice_defaults(practice_defaults)
+    return JSONResponse({"ok": True})
+
+
+@router.get("/settings/app", dependencies=_AUTH)
+async def get_app_settings(request: Request) -> JSONResponse:
+    """アプリ設定を取得する."""
+    app_settings = await request.app.state.settings_store.get_all_settings()
+    return JSONResponse(app_settings)
+
+
+@router.put("/settings/app", dependencies=_AUTH)
+async def update_app_settings(request: Request, body: dict[str, Any]) -> JSONResponse:
+    """アプリ設定を更新し、Google Sheets と settings_store を同期する."""
+    sheets_client = _require_sheets_client(request)
+    for key, value in body.items():
+        if not await sheets_client.set_app_setting(key, str(value)):
+            raise HTTPException(status_code=500, detail=f"Failed to update setting: {key}")
+        await request.app.state.settings_store.set_setting(key, str(value))
+    return JSONResponse({"ok": True})
