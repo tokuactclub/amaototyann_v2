@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/lineWebhook/{bot_id}")
+@router.post("/lineWebhook/{bot_id}/")
 async def line_webhook(bot_id: int, request: Request):
     """LINE の Webhook を受け取るエンドポイント."""
     logger.info("Received LINE webhook for bot %d", bot_id)
