@@ -1,3 +1,6 @@
+"""メッセージテンプレート (LINE + Discord 共通)."""
+
+# === LINE 固有メッセージ ===
 HELP = """コマンド一覧だよ！
 - !help: このヘルプを表示するよ
 - !change_group: リマインドするグループを送信されたグループに変更するよ
@@ -7,10 +10,13 @@ HELP = """コマンド一覧だよ！
 
 CHANGE_GROUP = "リマインドするグループを変更したよ！"
 CHANGE_GROUP_ERROR = "グループ名の取得に失敗したよ！もう一度試してね！"
+
+# === 共通メッセージ ===
 PRACTICE = """今日の練習は{0}でします。
 時間は{1}〜{2}です！遅刻・欠席は連絡をお願いします！{3}"""
 NO_PRACTICE = "今日は練習はないよ！"
-PLACE = "まだこの機能は実装されていないよ！ごめんね！"  # 実装する場合はヘルプコマンドも修正すること
+PLACE = "まだこの機能は実装されていないよ！ごめんね！"
+
 HANDOVER = """あまおとの引き継ぎ資料だよ！
 Brookの招待URLから招待を受けないとアクセスできないから気をつけて！
 https://scrapbox.io/amaotoHandover/TOP"""
@@ -22,15 +28,17 @@ INSTAGRAM = """あまおとのInstagramだよ！
 https://www.instagram.com/tokuactclub/"""
 
 TWITTER = """あまおとのX(旧Twitter)だよ！
-https://twitter.com/tokuactclub/"""
+https://x.com/tokuactclub/"""
 
 HOMEPAGE = """あまおとのHPだよ！
 https://tokushimaactclub.web.fc2.com/"""
 
-JOIN = """{0}がグループに参加したよ！
+CMD_ERROR = "コマンドが見つかりませんでした"
+NONE_REMIND_TASK = "リマインドするタスクは無いよ！"
+
+# === プラットフォーム別 JOIN メッセージ ===
+JOIN_LINE = """{0}がグループに参加したよ！
 今月残り{1}回メッセージを送れるよ！
 返信はカウントされないから安心してね！"""
 
-CMD_ERROR = "コマンドが見つかりませんでした"
-
-NONE_REMIND_TASK = "リマインドするタスクは無いよ！"
+JOIN_DISCORD = """こんにちは！あまおとちゃんだよ！"""
