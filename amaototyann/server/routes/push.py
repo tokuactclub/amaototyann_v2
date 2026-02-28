@@ -15,8 +15,15 @@ router = APIRouter()
 
 
 @router.post("/pushMessage")
+@router.post("/pushMessage/")
 async def push_message(request: Request):
-    """外部からコマンドを実行するエンドポイント (LINE / Discord 両対応)."""
+    """外部からコマンドを実行するエンドポイント (LINE / Discord 両対応).
+
+    後方互換性:
+    - ``platform`` フィールドは省略可能。省略時は ``"line"`` として処理する。
+    - 末尾スラッシュあり/なし両方のパスを受け付ける
+      (GAS cron job などのクライアントが ``/pushMessage/`` を呼ぶ場合に対応)。
+    """
     request_json = await request.json()
     cmd = request_json.get("cmd")
     if cmd is None:

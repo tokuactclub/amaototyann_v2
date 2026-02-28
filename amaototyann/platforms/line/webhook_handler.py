@@ -1,8 +1,10 @@
 """LINE Webhook イベントハンドラ."""
 
+import asyncio
 import json
 import logging
 
+import aiohttp
 from fastapi import Request
 
 from amaototyann import messages
@@ -13,6 +15,49 @@ from amaototyann.platforms.line.security import verify_line_signature
 from amaototyann.store.memory import BotStore, GroupStore
 
 logger = logging.getLogger(__name__)
+
+_GPT_PREFIX = "あまおとちゃん"
+_GPT_RETRY_COUNT = 3
+_GPT_RETRY_INTERVAL = 0.5
+
+
+async def _forward_to_gpt_webhook(body: bytes, gpt_webhook_url: str) -> bool:
+    """LINE webhook ボディを GPT webhook URL に転送する.
+
+    3回リトライし、成功した場合は True を返す。
+    失敗してもエラーにはせず、ログのみ出力する。
+    """
+    for attempt in range(1, _GPT_RETRY_COUNT + 1):
+        try:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.post(
+                    gpt_webhook_url,
+                    data=body,
+                    headers={"Content-Type": "application/json"},
+                    timeout=aiohttp.ClientTimeout(total=30),
+                ) as resp,
+            ):
+                if resp.status == 200:
+                    logger.info("GPT webhook forwarded successfully (attempt %d)", attempt)
+                    return True
+                logger.warning(
+                    "GPT webhook returned status %d (attempt %d/%d)",
+                    resp.status,
+                    attempt,
+                    _GPT_RETRY_COUNT,
+                )
+        except Exception as e:
+            logger.warning(
+                "GPT webhook forward failed (attempt %d/%d): %s",
+                attempt,
+                _GPT_RETRY_COUNT,
+                e,
+            )
+        if attempt < _GPT_RETRY_COUNT:
+            await asyncio.sleep(_GPT_RETRY_INTERVAL)
+    logger.error("GPT webhook forwarding failed after %d attempts", _GPT_RETRY_COUNT)
+    return False
 
 
 async def handle_line_webhook(
@@ -37,7 +82,12 @@ async def handle_line_webhook(
     for event in events:
         event_type = event.get("type")
         if event_type == "message" and event.get("message", {}).get("type") == "text":
-            await _handle_message(event, bot_id, bot_store, group_store)
+            raw_text: str = event.get("message", {}).get("text", "")
+            if not settings.is_debug and bot.gpt_webhook_url and raw_text.startswith(_GPT_PREFIX):
+                logger.info("GPT prefix detected, forwarding to gpt_webhook_url")
+                await _forward_to_gpt_webhook(body, bot.gpt_webhook_url)
+            else:
+                await _handle_message(event, bot_id, bot_store, group_store)
         elif event_type == "join":
             await _handle_join(event, bot_id, bot_store, group_store)
         elif event_type == "leave":

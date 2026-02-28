@@ -8,10 +8,14 @@ from amaototyann.server.lifespan import lifespan
 
 def create_app() -> FastAPI:
     """FastAPI アプリケーションを作成する."""
+    # redirect_slashes=False: POST /pushMessage/ を 307 リダイレクトせず直接処理する。
+    # GAS cron job などのクライアントが末尾スラッシュ付きで呼んだ場合に
+    # 307 → GET 変換で壊れるのを防ぐ。各ルーターで "/" あり・なし両方を登録する。
     app = FastAPI(
         title="あまおとちゃん",
         version="3.0.0",
         lifespan=lifespan,
+        redirect_slashes=False,
     )
 
     # ルーターの登録

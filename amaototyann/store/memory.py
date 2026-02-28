@@ -36,6 +36,24 @@ class BotStore:
         async with self._lock:
             return list(self._data.values())
 
+    async def add(self, bot: BotInfo) -> None:
+        """BotInfo を追加する。同じ id が既に存在する場合は ValueError を raise。"""
+        async with self._lock:
+            if bot.id in self._data:
+                raise ValueError(f"Bot already exists: {bot.id}")
+            self._data[bot.id] = bot
+            self._is_dirty = True
+            logger.info("BotStore added bot %d: %s", bot.id, bot.bot_name)
+
+    async def delete(self, bot_id: int) -> None:
+        """指定 id の BotInfo を削除する。存在しない場合は KeyError を raise。"""
+        async with self._lock:
+            if bot_id not in self._data:
+                raise KeyError(f"Bot not found: {bot_id}")
+            del self._data[bot_id]
+            self._is_dirty = True
+            logger.info("BotStore deleted bot %d", bot_id)
+
     async def update(self, bot_id: int, **fields: object) -> BotInfo:
         """Bot 情報のフィールドを更新."""
         async with self._lock:
