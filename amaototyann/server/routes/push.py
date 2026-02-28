@@ -7,7 +7,6 @@ from fastapi.responses import PlainTextResponse
 
 from amaototyann.config import get_settings
 from amaototyann.platforms.line.commands import LineCommandHandler
-from amaototyann.server.lifespan import bot_store, group_store
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,7 @@ async def push_message(request: Request):
     if platform == "discord":
         return await _handle_discord_push(cmd)
     else:
-        return await _handle_line_push(cmd)
+        return await _handle_line_push(request, cmd)
 
 
 async def _handle_discord_push(cmd: str) -> PlainTextResponse:
@@ -63,16 +62,16 @@ async def _handle_discord_push(cmd: str) -> PlainTextResponse:
         return PlainTextResponse("error", status_code=500)
 
 
-async def _handle_line_push(cmd: str) -> PlainTextResponse:
+async def _handle_line_push(request: Request, cmd: str) -> PlainTextResponse:
     """LINE push message を処理する."""
     try:
-        bots = await bot_store.list_all()
+        bots = await request.app.state.bot_store.list_all()
         active_bots = [b for b in bots if b.in_group]
         if not active_bots:
             return PlainTextResponse("error: no active bot", status_code=400)
 
         bot = active_bots[0]
-        target_group_id = await group_store.get_group_id()
+        target_group_id = await request.app.state.group_store.get_group_id()
 
         handler = LineCommandHandler(
             channel_access_token=bot.channel_access_token,

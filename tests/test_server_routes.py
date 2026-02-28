@@ -75,12 +75,16 @@ def _build_test_app(bot_store: BotStore, group_store: GroupStore) -> FastAPI:
     """テスト用 FastAPI アプリを組み立てる.
 
     * null_lifespan でサービス起動をスキップ
-    * ルートモジュール内のグローバルストア参照をモックで上書き
+    * app.state にストアを注入してルーターが request.app.state 経由で読めるようにする
     """
-    app = FastAPI(lifespan=_null_lifespan)
+    app = FastAPI(lifespan=_null_lifespan, redirect_slashes=False)
     app.include_router(admin_router)
     app.include_router(push_router)
     app.include_router(line_router)
+    # Set app.state for dependency injection
+    app.state.bot_store = bot_store
+    app.state.group_store = group_store
+    app.state.sheets_client = None
     return app
 
 
@@ -176,35 +180,25 @@ class TestPushMessageEndpoint:
         """アクティブな Bot がいない場合は 400 を返す."""
         empty_bot_store = BotStore()
         group_store = GroupStore()
-
         app = _build_test_app(empty_bot_store, group_store)
-
-        with patch("amaototyann.server.routes.push.bot_store", empty_bot_store):
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app), base_url="http://test"
-            ) as client:
-                response = await client.post(
-                    "/pushMessage", json={"cmd": "!practice", "platform": "line"}
-                )
+        # No patches needed for stores
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/pushMessage", json={"cmd": "!practice", "platform": "line"}
+            )
 
         assert response.status_code == 400
 
-    async def test_line_push_valid_cmd_calls_handler(
-        self, test_app: FastAPI, stores: tuple[BotStore, GroupStore]
-    ) -> None:
+    async def test_line_push_valid_cmd_calls_handler(self, test_app: FastAPI) -> None:
         """有効なコマンドが LineCommandHandler.process に渡される."""
-        bot_store, group_store = stores
-
         mock_handler = AsyncMock()
         mock_handler.process = AsyncMock(return_value=True)
 
-        with (
-            patch("amaototyann.server.routes.push.bot_store", bot_store),
-            patch("amaototyann.server.routes.push.group_store", group_store),
-            patch(
-                "amaototyann.server.routes.push.LineCommandHandler",
-                return_value=mock_handler,
-            ),
+        with patch(
+            "amaototyann.server.routes.push.LineCommandHandler",
+            return_value=mock_handler,
         ):
             async with httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=test_app), base_url="http://test"
@@ -217,22 +211,14 @@ class TestPushMessageEndpoint:
         assert response.text == "finish"
         mock_handler.process.assert_awaited_once_with("!practice")
 
-    async def test_line_push_handler_returns_false_gives_400(
-        self, test_app: FastAPI, stores: tuple[BotStore, GroupStore]
-    ) -> None:
+    async def test_line_push_handler_returns_false_gives_400(self, test_app: FastAPI) -> None:
         """LineCommandHandler.process が False を返すと 400."""
-        bot_store, group_store = stores
-
         mock_handler = AsyncMock()
         mock_handler.process = AsyncMock(return_value=False)
 
-        with (
-            patch("amaototyann.server.routes.push.bot_store", bot_store),
-            patch("amaototyann.server.routes.push.group_store", group_store),
-            patch(
-                "amaototyann.server.routes.push.LineCommandHandler",
-                return_value=mock_handler,
-            ),
+        with patch(
+            "amaototyann.server.routes.push.LineCommandHandler",
+            return_value=mock_handler,
         ):
             async with httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=test_app), base_url="http://test"
@@ -295,40 +281,29 @@ class TestLineWebhookEndpoint:
         """存在しない bot_id は 404."""
         empty_bot_store = BotStore()
         group_store = GroupStore()
-
-        with (
-            patch("amaototyann.server.routes.line.bot_store", empty_bot_store),
-            patch("amaototyann.server.routes.line.group_store", group_store),
-        ):
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=test_app), base_url="http://test"
-            ) as client:
-                response = await client.post(
-                    "/lineWebhook/999",
-                    content=self._webhook_payload(),
-                    headers={"Content-Type": "application/json"},
-                )
+        app = _build_test_app(empty_bot_store, group_store)
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/lineWebhook/999",
+                content=self._webhook_payload(),
+                headers={"Content-Type": "application/json"},
+            )
 
         assert response.status_code == 404
 
-    async def test_debug_mode_skips_signature_check(
-        self, test_app: FastAPI, stores: tuple[BotStore, GroupStore]
-    ) -> None:
+    async def test_debug_mode_skips_signature_check(self, test_app: FastAPI) -> None:
         """デバッグモードでは署名なしでも 200 を返す."""
-        bot_store, group_store = stores
         body = self._webhook_payload()
 
         mock_settings = MagicMock()
         mock_settings.is_debug = True
         mock_settings.discord_bot_token = None
 
-        with (
-            patch("amaototyann.server.routes.line.bot_store", bot_store),
-            patch("amaototyann.server.routes.line.group_store", group_store),
-            patch(
-                "amaototyann.platforms.line.webhook_handler.get_settings",
-                return_value=mock_settings,
-            ),
+        with patch(
+            "amaototyann.platforms.line.webhook_handler.get_settings",
+            return_value=mock_settings,
         ):
             async with httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=test_app), base_url="http://test"
@@ -342,11 +317,8 @@ class TestLineWebhookEndpoint:
         assert response.status_code == 200
         assert response.json() == {"status": "finish"}
 
-    async def test_valid_signature_returns_200(
-        self, test_app: FastAPI, stores: tuple[BotStore, GroupStore]
-    ) -> None:
+    async def test_valid_signature_returns_200(self, test_app: FastAPI) -> None:
         """有効な HMAC 署名でリクエストが通る."""
-        bot_store, group_store = stores
         secret = "test_secret"
         body = self._webhook_payload()
         signature = _sign_body(body, secret)
@@ -355,13 +327,9 @@ class TestLineWebhookEndpoint:
         mock_settings.is_debug = False
         mock_settings.discord_bot_token = None
 
-        with (
-            patch("amaototyann.server.routes.line.bot_store", bot_store),
-            patch("amaototyann.server.routes.line.group_store", group_store),
-            patch(
-                "amaototyann.platforms.line.webhook_handler.get_settings",
-                return_value=mock_settings,
-            ),
+        with patch(
+            "amaototyann.platforms.line.webhook_handler.get_settings",
+            return_value=mock_settings,
         ):
             async with httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=test_app), base_url="http://test"
@@ -377,23 +345,16 @@ class TestLineWebhookEndpoint:
 
         assert response.status_code == 200
 
-    async def test_invalid_signature_returns_403(
-        self, test_app: FastAPI, stores: tuple[BotStore, GroupStore]
-    ) -> None:
+    async def test_invalid_signature_returns_403(self, test_app: FastAPI) -> None:
         """不正な署名は 403."""
-        bot_store, group_store = stores
         body = self._webhook_payload()
 
         mock_settings = MagicMock()
         mock_settings.is_debug = False
 
-        with (
-            patch("amaototyann.server.routes.line.bot_store", bot_store),
-            patch("amaototyann.server.routes.line.group_store", group_store),
-            patch(
-                "amaototyann.platforms.line.webhook_handler.get_settings",
-                return_value=mock_settings,
-            ),
+        with patch(
+            "amaototyann.platforms.line.webhook_handler.get_settings",
+            return_value=mock_settings,
         ):
             async with httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=test_app), base_url="http://test"
@@ -409,23 +370,16 @@ class TestLineWebhookEndpoint:
 
         assert response.status_code == 403
 
-    async def test_missing_signature_returns_403(
-        self, test_app: FastAPI, stores: tuple[BotStore, GroupStore]
-    ) -> None:
+    async def test_missing_signature_returns_403(self, test_app: FastAPI) -> None:
         """x-line-signature ヘッダーが欠落している場合は 403."""
-        bot_store, group_store = stores
         body = self._webhook_payload()
 
         mock_settings = MagicMock()
         mock_settings.is_debug = False
 
-        with (
-            patch("amaototyann.server.routes.line.bot_store", bot_store),
-            patch("amaototyann.server.routes.line.group_store", group_store),
-            patch(
-                "amaototyann.platforms.line.webhook_handler.get_settings",
-                return_value=mock_settings,
-            ),
+        with patch(
+            "amaototyann.platforms.line.webhook_handler.get_settings",
+            return_value=mock_settings,
         ):
             async with httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=test_app), base_url="http://test"
@@ -438,11 +392,8 @@ class TestLineWebhookEndpoint:
 
         assert response.status_code == 403
 
-    async def test_message_event_calls_command_handler(
-        self, test_app: FastAPI, stores: tuple[BotStore, GroupStore]
-    ) -> None:
+    async def test_message_event_calls_command_handler(self, test_app: FastAPI) -> None:
         """テキストメッセージイベントで LineCommandHandler.process が呼ばれる."""
-        bot_store, group_store = stores
         body = self._webhook_payload(
             events=[
                 {
@@ -461,8 +412,6 @@ class TestLineWebhookEndpoint:
         mock_handler.process = AsyncMock(return_value=True)
 
         with (
-            patch("amaototyann.server.routes.line.bot_store", bot_store),
-            patch("amaototyann.server.routes.line.group_store", group_store),
             patch(
                 "amaototyann.platforms.line.webhook_handler.get_settings",
                 return_value=mock_settings,
@@ -484,11 +433,8 @@ class TestLineWebhookEndpoint:
         assert response.status_code == 200
         mock_handler.process.assert_awaited_once_with("!help")
 
-    async def test_non_command_message_does_not_call_handler(
-        self, test_app: FastAPI, stores: tuple[BotStore, GroupStore]
-    ) -> None:
+    async def test_non_command_message_does_not_call_handler(self, test_app: FastAPI) -> None:
         """'!' で始まらないメッセージはコマンドハンドラーを呼ばない."""
-        bot_store, group_store = stores
         body = self._webhook_payload(
             events=[
                 {
@@ -506,8 +452,6 @@ class TestLineWebhookEndpoint:
         mock_handler_cls = MagicMock()
 
         with (
-            patch("amaototyann.server.routes.line.bot_store", bot_store),
-            patch("amaototyann.server.routes.line.group_store", group_store),
             patch(
                 "amaototyann.platforms.line.webhook_handler.get_settings",
                 return_value=mock_settings,

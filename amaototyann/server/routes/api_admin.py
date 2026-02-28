@@ -4,7 +4,7 @@ import logging
 import secrets
 from typing import Any
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from amaototyann.config import get_settings
@@ -17,8 +17,6 @@ from amaototyann.core.commands import (
 )
 from amaototyann.models.bot import BotInfo
 from amaototyann.models.schedule import PracticeCreate, ReminderCreate
-from amaototyann.server import lifespan as _lifespan
-from amaototyann.server.lifespan import bot_store, group_store
 
 logger = logging.getLogger(__name__)
 
@@ -128,15 +126,16 @@ async def me() -> dict[str, bool]:
 
 
 @router.get("/practice", dependencies=_AUTH)
-async def get_practice() -> JSONResponse:
+async def get_practice(request: Request) -> JSONResponse:
     """練習予定一覧を取得する.
 
     Google Sheets から生の練習予定データをリストとして返す。
     """
     try:
-        if _lifespan.sheets_client is None:
+        sheets_client = request.app.state.sheets_client
+        if sheets_client is None:
             raise HTTPException(status_code=503, detail="SheetsClient not initialized")
-        events = await _lifespan.sheets_client.get_practice_events()
+        events = await sheets_client.get_practice_events()
         return JSONResponse(events)
     except HTTPException:
         raise
@@ -146,9 +145,10 @@ async def get_practice() -> JSONResponse:
 
 
 @router.post("/practice", status_code=201, dependencies=_AUTH)
-async def post_practice(body: PracticeCreate) -> JSONResponse:
+async def post_practice(request: Request, body: PracticeCreate) -> JSONResponse:
     """練習予定を追加する."""
     result = await add_practice(
+        request.app.state.sheets_client,
         date=body.date,
         place=body.place,
         start_time=body.start_time,
@@ -162,9 +162,9 @@ async def post_practice(body: PracticeCreate) -> JSONResponse:
 
 
 @router.delete("/practice/{event_id}", dependencies=_AUTH)
-async def delete_practice(event_id: str) -> JSONResponse:
+async def delete_practice(request: Request, event_id: str) -> JSONResponse:
     """練習予定を削除する."""
-    result = await delete_event(event_id)
+    result = await delete_event(request.app.state.sheets_client, event_id)
     if result.error:
         logger.error("delete_practice error: %s", result.error)
         raise HTTPException(status_code=500, detail=result.error)
@@ -177,9 +177,9 @@ async def delete_practice(event_id: str) -> JSONResponse:
 
 
 @router.get("/reminder", dependencies=_AUTH)
-async def get_reminder() -> JSONResponse:
+async def get_reminder(request: Request) -> JSONResponse:
     """全リマインダーを取得する (フィルタなし)."""
-    result = await get_all_reminders()
+    result = await get_all_reminders(request.app.state.sheets_client)
     if result.error:
         logger.error("get_all_reminders error: %s", result.error)
         raise HTTPException(status_code=500, detail=result.error)
@@ -188,9 +188,10 @@ async def get_reminder() -> JSONResponse:
 
 
 @router.post("/reminder", status_code=201, dependencies=_AUTH)
-async def post_reminder(body: ReminderCreate) -> JSONResponse:
+async def post_reminder(request: Request, body: ReminderCreate) -> JSONResponse:
     """リマインダーを追加する."""
     result = await add_reminder(
+        request.app.state.sheets_client,
         deadline=body.deadline,
         role=body.role,
         task=body.task,
@@ -205,9 +206,9 @@ async def post_reminder(body: ReminderCreate) -> JSONResponse:
 
 
 @router.post("/reminder/{event_id}/finish", dependencies=_AUTH)
-async def finish_reminder(event_id: str) -> JSONResponse:
+async def finish_reminder(request: Request, event_id: str) -> JSONResponse:
     """リマインダーを完了済みにする."""
-    result = await finish_event(event_id)
+    result = await finish_event(request.app.state.sheets_client, event_id)
     if result.error:
         logger.error("finish_event error: %s", result.error)
         raise HTTPException(status_code=500, detail=result.error)
@@ -215,9 +216,9 @@ async def finish_reminder(event_id: str) -> JSONResponse:
 
 
 @router.delete("/reminder/{event_id}", dependencies=_AUTH)
-async def delete_reminder(event_id: str) -> JSONResponse:
+async def delete_reminder(request: Request, event_id: str) -> JSONResponse:
     """リマインダーを削除する."""
-    result = await delete_event(event_id)
+    result = await delete_event(request.app.state.sheets_client, event_id)
     if result.error:
         logger.error("delete_reminder error: %s", result.error)
         raise HTTPException(status_code=500, detail=result.error)
@@ -230,26 +231,28 @@ async def delete_reminder(event_id: str) -> JSONResponse:
 
 
 @router.get("/bots", dependencies=_AUTH)
-async def get_bots() -> JSONResponse:
+async def get_bots(request: Request) -> JSONResponse:
     """全 Bot 情報を取得する."""
-    bots = await bot_store.list_all()
+    bots = await request.app.state.bot_store.list_all()
     return JSONResponse([bot.model_dump() for bot in bots])
 
 
 @router.put("/bots", dependencies=_AUTH)
-async def put_bots(body: list[dict[str, Any]]) -> JSONResponse:
+async def put_bots(request: Request, body: list[dict[str, Any]]) -> JSONResponse:
     """Bot 情報を更新し、Google Sheets と bot_store を同期する."""
     try:
-        if _lifespan.sheets_client is None:
+        sheets_client = request.app.state.sheets_client
+        bot_store = request.app.state.bot_store
+        if sheets_client is None:
             raise HTTPException(status_code=503, detail="SheetsClient not initialized")
 
-        success = await _lifespan.sheets_client.set_bot_info(body)
+        success = await sheets_client.set_bot_info(body)
         if not success:
             raise HTTPException(status_code=500, detail="Failed to update bot info in Sheets")
         logger.info("set_bot_info Sheets response: success=%s", success)
 
         # Sheets から最新情報を再取得して bot_store をリロード
-        new_bot_data = await _lifespan.sheets_client.get_bot_info()
+        new_bot_data = await sheets_client.get_bot_info()
         if new_bot_data:
             new_bots = [
                 BotInfo(
@@ -281,10 +284,10 @@ async def put_bots(body: list[dict[str, Any]]) -> JSONResponse:
 
 
 @router.get("/group", dependencies=_AUTH)
-async def get_group() -> JSONResponse:
+async def get_group(request: Request) -> JSONResponse:
     """グループ情報を取得する."""
     try:
-        info = await group_store.get()
+        info = await request.app.state.group_store.get()
         return JSONResponse(info.model_dump())
     except ValueError as e:
         logger.error("get_group error: %s", e)
@@ -292,7 +295,7 @@ async def get_group() -> JSONResponse:
 
 
 @router.put("/group", dependencies=_AUTH)
-async def put_group(body: dict[str, str]) -> JSONResponse:
+async def put_group(request: Request, body: dict[str, str]) -> JSONResponse:
     """グループ情報を更新し、Google Sheets と group_store を同期する."""
     group_id = body.get("id", "")
     group_name = body.get("groupName", "")
@@ -301,10 +304,12 @@ async def put_group(body: dict[str, str]) -> JSONResponse:
         raise HTTPException(status_code=422, detail="id and groupName are required")
 
     try:
-        if _lifespan.sheets_client is None:
+        sheets_client = request.app.state.sheets_client
+        group_store = request.app.state.group_store
+        if sheets_client is None:
             raise HTTPException(status_code=503, detail="SheetsClient not initialized")
 
-        success = await _lifespan.sheets_client.set_group_info(body)
+        success = await sheets_client.set_group_info(body)
         if not success:
             raise HTTPException(status_code=500, detail="Failed to update group info in Sheets")
         logger.info("set_group_info Sheets response: success=%s", success)

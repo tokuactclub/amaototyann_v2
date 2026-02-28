@@ -6,20 +6,9 @@ from datetime import UTC, datetime, timedelta, timezone
 
 from amaototyann import messages
 from amaototyann.models.commands import CommandResult
+from amaototyann.sheets.client import SheetsClient
 
 logger = logging.getLogger(__name__)
-
-
-def _get_sheets_client():
-    """sheets_client のグローバルインスタンスを取得する.
-
-    循環インポートを避けるため遅延インポートする。
-    """
-    from amaototyann.server.lifespan import sheets_client
-
-    if sheets_client is None:
-        raise RuntimeError("SheetsClient is not initialized")
-    return sheets_client
 
 
 def _calculate_date_difference(dt: datetime) -> int:
@@ -31,11 +20,10 @@ def _calculate_date_difference(dt: datetime) -> int:
     return (dt - today).days
 
 
-async def get_practice_events() -> CommandResult:
+async def get_practice_events(sheets_client: SheetsClient) -> CommandResult:
     """練習予定を取得する."""
     try:
-        client = _get_sheets_client()
-        events = await client.get_practice_events()
+        events = await sheets_client.get_practice_events()
         logger.info("practice events: %s", events)
         if not isinstance(events, list):
             return CommandResult(error="Unexpected response from Sheets")
@@ -66,11 +54,12 @@ async def get_practice_events() -> CommandResult:
         return CommandResult(error=str(e))
 
 
-async def get_reminder_events(day_left: str | None = None) -> CommandResult:
+async def get_reminder_events(
+    sheets_client: SheetsClient, day_left: str | None = None
+) -> CommandResult:
     """リマインダー対象のイベントを取得する."""
     try:
-        client = _get_sheets_client()
-        events = await client.get_reminders()
+        events = await sheets_client.get_reminders()
         if not isinstance(events, list):
             return CommandResult(error="Unexpected response from Sheets")
 
@@ -107,11 +96,10 @@ async def get_reminder_events(day_left: str | None = None) -> CommandResult:
         return CommandResult(error=str(e))
 
 
-async def finish_event(event_id: str) -> CommandResult:
+async def finish_event(sheets_client: SheetsClient, event_id: str) -> CommandResult:
     """リマインダー通知を終了する."""
     try:
-        client = _get_sheets_client()
-        response = await client.finish_reminder(event_id)
+        response = await sheets_client.finish_reminder(event_id)
         if response is not None:
             return CommandResult(text=f"{response}の通知を終わるよ！")
         return CommandResult(error="エラーで通知を終われなかったよ！ごめんね！")
@@ -120,11 +108,10 @@ async def finish_event(event_id: str) -> CommandResult:
         return CommandResult(error=str(e))
 
 
-async def get_all_reminders() -> CommandResult:
+async def get_all_reminders(sheets_client: SheetsClient) -> CommandResult:
     """全リマインダーを取得する(管理画面用、フィルタなし)."""
     try:
-        client = _get_sheets_client()
-        events = await client.get_reminders()
+        events = await sheets_client.get_reminders()
         if not isinstance(events, list):
             return CommandResult(error="Unexpected response from Sheets")
 
@@ -147,12 +134,16 @@ async def get_all_reminders() -> CommandResult:
 
 
 async def add_practice(
-    date: str, place: str, start_time: str, end_time: str, memo: str = ""
+    sheets_client: SheetsClient,
+    date: str,
+    place: str,
+    start_time: str,
+    end_time: str,
+    memo: str = "",
 ) -> CommandResult:
     """練習予定を追加する."""
     try:
-        client = _get_sheets_client()
-        success = await client.add_practice(date, place, start_time, end_time, memo)
+        success = await sheets_client.add_practice(date, place, start_time, end_time, memo)
         if success:
             return CommandResult(text="練習予定を追加しました")
         return CommandResult(error="練習予定の追加に失敗しました")
@@ -162,6 +153,7 @@ async def add_practice(
 
 
 async def add_reminder(
+    sheets_client: SheetsClient,
     deadline: str,
     role: str,
     task: str,
@@ -171,8 +163,7 @@ async def add_reminder(
 ) -> CommandResult:
     """リマインダーを追加する."""
     try:
-        client = _get_sheets_client()
-        success = await client.add_reminder(deadline, role, person, task, memo, remind_date)
+        success = await sheets_client.add_reminder(deadline, role, person, task, memo, remind_date)
         if success:
             return CommandResult(text="リマインダーを追加しました")
         return CommandResult(error="リマインダーの追加に失敗しました")
@@ -181,13 +172,12 @@ async def add_reminder(
         return CommandResult(error=str(e))
 
 
-async def delete_event(event_id: str) -> CommandResult:
+async def delete_event(sheets_client: SheetsClient, event_id: str) -> CommandResult:
     """カレンダーイベントを削除する."""
     try:
-        client = _get_sheets_client()
-        result = await client.delete_practice(event_id)
+        result = await sheets_client.delete_practice(event_id)
         if result is None:
-            result = await client.delete_reminder(event_id)
+            result = await sheets_client.delete_reminder(event_id)
         if result is not None:
             return CommandResult(text=f"{result}を削除しました")
         return CommandResult(error="イベントの削除に失敗しました")

@@ -5,7 +5,6 @@ import logging
 from fastapi import APIRouter, HTTPException, Request
 
 from amaototyann.platforms.line.webhook_handler import handle_line_webhook
-from amaototyann.server.lifespan import bot_store, group_store
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +21,8 @@ async def line_webhook(bot_id: int, request: Request):
     """
     logger.info("Received LINE webhook for bot %d", bot_id)
     try:
+        bot_store = request.app.state.bot_store
+        group_store = request.app.state.group_store
         return await handle_line_webhook(request, bot_id, bot_store, group_store)
     except HTTPException:
         raise

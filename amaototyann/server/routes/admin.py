@@ -3,12 +3,10 @@
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import PlainTextResponse
 
 from amaototyann.config import get_settings
-from amaototyann.server import lifespan as _lifespan
-from amaototyann.server.lifespan import bot_store, group_store
 
 logger = logging.getLogger(__name__)
 
@@ -41,25 +39,28 @@ async def test():
 
 
 @router.get("/backupDatabase")
-async def backup_database():
+async def backup_database(request: Request):
     """データベースを Google Sheets にバックアップするエンドポイント."""
     settings = get_settings()
     if settings.is_debug:
         return PlainTextResponse("Backup skipped in debug mode")
 
-    if _lifespan.sheets_client is None:
+    sheets_client = request.app.state.sheets_client
+    if sheets_client is None:
         return PlainTextResponse("Sheets client not configured", status_code=503)
 
+    bot_store = request.app.state.bot_store
+    group_store = request.app.state.group_store
     results = []
 
     bot_data = await bot_store.dump_for_backup()
-    bot_ok = await _lifespan.sheets_client.set_bot_info(bot_data)
+    bot_ok = await sheets_client.set_bot_info(bot_data)
     if bot_ok:
         await bot_store.mark_clean()
     results.append(f"bot={'success' if bot_ok else 'error'}")
 
     group_data = await group_store.dump_for_backup()
-    group_ok = await _lifespan.sheets_client.set_group_info(group_data)
+    group_ok = await sheets_client.set_group_info(group_data)
     if group_ok:
         await group_store.mark_clean()
     results.append(f"group={'success' if group_ok else 'error'}")

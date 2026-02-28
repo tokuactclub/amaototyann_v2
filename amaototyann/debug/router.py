@@ -10,7 +10,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from amaototyann.config import get_settings
-from amaototyann.server.lifespan import bot_store, group_store
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,7 @@ def _get_template_files() -> list[str]:
     return [f.name for f in _WEBHOOK_TEMPLATES_DIR.iterdir() if f.suffix == ".json"]
 
 
-async def _fetch_database_data() -> list[list]:
+async def _fetch_database_data(bot_store) -> list[list]:
     """Bot 情報を取得する."""
     try:
         bots = await bot_store.list_all()
@@ -40,7 +39,7 @@ async def _fetch_database_data() -> list[list]:
 @router.get("/", response_class=HTMLResponse)
 async def debug_index(request: Request):
     """デバッグ UI のメインページ."""
-    database_data = await _fetch_database_data()
+    database_data = await _fetch_database_data(request.app.state.bot_store)
     template_files = _get_template_files()
     return templates.TemplateResponse(
         "webhook_sender.html",
@@ -69,7 +68,7 @@ async def debug_send_webhook(
     webhook_template = {}
 
     template_files = _get_template_files()
-    database_data = await _fetch_database_data()
+    database_data = await _fetch_database_data(request.app.state.bot_store)
 
     # テンプレート読み込み
     template_path = _WEBHOOK_TEMPLATES_DIR / template
@@ -85,7 +84,7 @@ async def debug_send_webhook(
 
             elif template == "join.json":
                 try:
-                    group_id = await group_store.get_group_id()
+                    group_id = await request.app.state.group_store.get_group_id()
                     webhook_template["events"][0]["source"]["groupId"] = group_id
                 except Exception:
                     pass
@@ -110,7 +109,7 @@ async def debug_send_webhook(
                 if "application/json" in res.headers.get("content-type", "")
                 else res.text,
             }
-            database_data = await _fetch_database_data()
+            database_data = await _fetch_database_data(request.app.state.bot_store)
         except Exception as e:
             response_data = {"error": f"An error occurred: {e}"}
 
@@ -134,7 +133,7 @@ async def update_template(request: Request):
     form = await request.form()
     selected_template = form.get("template", "")
     editable_fields = {}
-    database_data = await _fetch_database_data()
+    database_data = await _fetch_database_data(request.app.state.bot_store)
 
     if selected_template:
         template_path = _WEBHOOK_TEMPLATES_DIR / selected_template

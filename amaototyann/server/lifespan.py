@@ -15,17 +15,10 @@ from amaototyann.store.memory import BotStore, GroupStore
 
 logger = logging.getLogger(__name__)
 
-# グローバルストアインスタンス
-bot_store = BotStore()
-group_store = GroupStore()
 
-# グローバル SheetsClient インスタンス
-sheets_client: SheetsClient | None = None
-
-
-async def _backup_loop() -> None:
+async def _backup_loop(app: FastAPI) -> None:
     """定期的にストアデータを Google Sheets にバックアップするループ."""
-    if sheets_client is None:
+    if app.state.sheets_client is None:
         return
 
     settings = get_settings()
@@ -34,15 +27,15 @@ async def _backup_loop() -> None:
             if settings.is_debug:
                 logger.debug("Skipping backup in debug mode")
             else:
-                if bot_store.is_dirty:
-                    data = await bot_store.dump_for_backup()
-                    if await sheets_client.set_bot_info(data):
-                        await bot_store.mark_clean()
+                if app.state.bot_store.is_dirty:
+                    data = await app.state.bot_store.dump_for_backup()
+                    if await app.state.sheets_client.set_bot_info(data):
+                        await app.state.bot_store.mark_clean()
 
-                if group_store.is_dirty:
-                    data = await group_store.dump_for_backup()
-                    if await sheets_client.set_group_info(data):
-                        await group_store.mark_clean()
+                if app.state.group_store.is_dirty:
+                    data = await app.state.group_store.dump_for_backup()
+                    if await app.state.sheets_client.set_group_info(data):
+                        await app.state.group_store.mark_clean()
         except Exception as e:
             logger.error("Backup error: %s", e)
         await asyncio.sleep(60 * 3)
@@ -81,10 +74,14 @@ async def lifespan(app: FastAPI):
     # 2. 設定読み込み
     settings = get_settings()
 
-    # 3. SheetsClient 初期化 & 初期データ取得
-    global sheets_client
+    # 3. app.state 初期化
+    app.state.bot_store = BotStore()
+    app.state.group_store = GroupStore()
+    app.state.sheets_client = None
+
+    # 4. SheetsClient 初期化 & 初期データ取得
     if settings.google_service_account_json and settings.google_spreadsheet_id:
-        sheets_client = SheetsClient(
+        app.state.sheets_client = SheetsClient(
             settings.google_service_account_json,
             settings.google_spreadsheet_id,
         )
@@ -92,8 +89,8 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("Google Sheets credentials not configured")
 
-    if sheets_client:
-        bot_data = await sheets_client.get_bot_info()
+    if app.state.sheets_client:
+        bot_data = await app.state.sheets_client.get_bot_info()
         if bot_data:
             bots = [
                 BotInfo(
@@ -106,14 +103,14 @@ async def lifespan(app: FastAPI):
                 )
                 for row in bot_data
             ]
-            await bot_store.load(bots)
+            await app.state.bot_store.load(bots)
         else:
             logger.warning("No bot info loaded from Sheets")
 
-        group_data = await sheets_client.get_group_info()
+        group_data = await app.state.sheets_client.get_group_info()
         if group_data:
             group = GroupInfo(id=group_data["id"], group_name=group_data["groupName"])
-            await group_store.load(group)
+            await app.state.group_store.load(group)
         else:
             logger.warning("No group info loaded from Sheets")
 
@@ -131,7 +128,7 @@ async def lifespan(app: FastAPI):
         logger.warning("DISCORD_BOT_TOKEN not set. Discord bot will not start.")
 
     # 5. バックアップループの起動
-    backup_task = asyncio.create_task(_backup_loop())
+    backup_task = asyncio.create_task(_backup_loop(app))
     tasks.append(backup_task)
     logger.info("Backup loop started.")
 

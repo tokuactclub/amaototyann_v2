@@ -1,7 +1,7 @@
 """Tests for amaototyann.core.commands business logic."""
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -78,8 +78,7 @@ class TestGetPracticeEvents:
         mock_client = _make_mock_sheets_client(
             get_practice_events=AsyncMock(return_value=mock_events),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_practice_events()
+        result = await get_practice_events(mock_client)
 
         assert isinstance(result, CommandResult)
         assert result.text is not None
@@ -100,8 +99,7 @@ class TestGetPracticeEvents:
         mock_client = _make_mock_sheets_client(
             get_practice_events=AsyncMock(return_value=mock_events),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_practice_events()
+        result = await get_practice_events(mock_client)
 
         assert result.text is not None
         assert "09:30" in result.text
@@ -120,8 +118,7 @@ class TestGetPracticeEvents:
         mock_client = _make_mock_sheets_client(
             get_practice_events=AsyncMock(return_value=mock_events),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_practice_events()
+        result = await get_practice_events(mock_client)
 
         assert result.text is not None
         # memo is empty: the trailing "\n{memo}" branch is skipped
@@ -145,8 +142,7 @@ class TestGetPracticeEvents:
         mock_client = _make_mock_sheets_client(
             get_practice_events=AsyncMock(return_value=mock_events),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_practice_events()
+        result = await get_practice_events(mock_client)
 
         assert result.text is not None
         assert "\n\n" in result.text
@@ -157,8 +153,7 @@ class TestGetPracticeEvents:
         mock_client = _make_mock_sheets_client(
             get_practice_events=AsyncMock(return_value=[]),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_practice_events()
+        result = await get_practice_events(mock_client)
 
         assert result.is_empty is True
         assert result.text is None
@@ -168,8 +163,7 @@ class TestGetPracticeEvents:
         mock_client = _make_mock_sheets_client(
             get_practice_events=AsyncMock(side_effect=RuntimeError("network failure")),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_practice_events()
+        result = await get_practice_events(mock_client)
 
         assert result.error == "network failure"
         assert result.text is None
@@ -211,8 +205,7 @@ class TestGetReminderEvents:
         mock_client = _make_mock_sheets_client(
             get_reminders=AsyncMock(return_value=[event]),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_reminder_events(day_left="7")
+        result = await get_reminder_events(mock_client, day_left="7")
 
         assert result.events is not None
         assert len(result.events) == 1
@@ -223,8 +216,7 @@ class TestGetReminderEvents:
         mock_client = _make_mock_sheets_client(
             get_reminders=AsyncMock(return_value=[event]),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_reminder_events(day_left="7")
+        result = await get_reminder_events(mock_client, day_left="7")
 
         assert result.is_empty is True
         assert result.events is None
@@ -234,8 +226,7 @@ class TestGetReminderEvents:
         mock_client = _make_mock_sheets_client(
             get_reminders=AsyncMock(return_value=[event]),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_reminder_events(day_left="7")
+        result = await get_reminder_events(mock_client, day_left="7")
 
         assert result.is_empty is True
 
@@ -251,8 +242,7 @@ class TestGetReminderEvents:
         mock_client = _make_mock_sheets_client(
             get_reminders=AsyncMock(return_value=[event]),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_reminder_events(day_left="0")
+        result = await get_reminder_events(mock_client, day_left="0")
 
         assert result.is_empty is True
 
@@ -262,8 +252,7 @@ class TestGetReminderEvents:
         mock_client = _make_mock_sheets_client(
             get_reminders=AsyncMock(return_value=[event]),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_reminder_events()  # day_left=None
+        result = await get_reminder_events(mock_client)  # day_left=None
 
         assert result.events is not None
         assert len(result.events) == 1
@@ -273,8 +262,7 @@ class TestGetReminderEvents:
         mock_client = _make_mock_sheets_client(
             get_reminders=AsyncMock(return_value=[event]),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_reminder_events()
+        result = await get_reminder_events(mock_client)
 
         assert result.is_empty is True
 
@@ -283,8 +271,7 @@ class TestGetReminderEvents:
         mock_client = _make_mock_sheets_client(
             get_reminders=AsyncMock(return_value=[event]),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_reminder_events(day_left="7")
+        result = await get_reminder_events(mock_client, day_left="7")
 
         assert result.events is not None
         # date should be formatted as MM/DD (JST)
@@ -297,8 +284,7 @@ class TestGetReminderEvents:
         mock_client = _make_mock_sheets_client(
             get_reminders=AsyncMock(return_value=[event]),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_reminder_events(day_left="7")
+        result = await get_reminder_events(mock_client, day_left="7")
 
         assert result.events is not None
         assert result.events[0]["last_days"] == 7
@@ -307,8 +293,7 @@ class TestGetReminderEvents:
         mock_client = _make_mock_sheets_client(
             get_reminders=AsyncMock(return_value=[]),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_reminder_events(day_left="7")
+        result = await get_reminder_events(mock_client, day_left="7")
 
         assert result.is_empty is True
 
@@ -316,8 +301,7 @@ class TestGetReminderEvents:
         mock_client = _make_mock_sheets_client(
             get_reminders=AsyncMock(side_effect=ConnectionError("timeout")),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_reminder_events()
+        result = await get_reminder_events(mock_client)
 
         assert result.error == "timeout"
         assert result.events is None
@@ -331,8 +315,7 @@ class TestGetReminderEvents:
         mock_client = _make_mock_sheets_client(
             get_reminders=AsyncMock(return_value=events),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_reminder_events(day_left="7")
+        result = await get_reminder_events(mock_client, day_left="7")
 
         assert result.events is not None
         assert len(result.events) == 1
@@ -343,8 +326,7 @@ class TestGetReminderEvents:
         mock_client = _make_mock_sheets_client(
             get_reminders=AsyncMock(return_value=[event]),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await get_reminder_events()
+        result = await get_reminder_events(mock_client)
 
         assert result.events is not None
         assert result.events[0]["last_days"] == 3
@@ -360,8 +342,7 @@ class TestFinishEvent:
         mock_client = _make_mock_sheets_client(
             finish_reminder=AsyncMock(return_value="定期演奏会"),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await finish_event("event-123")
+        result = await finish_event(mock_client, "event-123")
 
         assert result.text == "定期演奏会の通知を終わるよ！"
         assert result.error is None
@@ -370,8 +351,7 @@ class TestFinishEvent:
         mock_client = _make_mock_sheets_client(
             finish_reminder=AsyncMock(return_value=None),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await finish_event("event-999")
+        result = await finish_event(mock_client, "event-999")
 
         assert result.error == "エラーで通知を終われなかったよ！ごめんね！"
         assert result.text is None
@@ -379,8 +359,7 @@ class TestFinishEvent:
     async def test_sheets_client_called_with_correct_id(self) -> None:
         mock_finish = AsyncMock(return_value="イベント名")
         mock_client = _make_mock_sheets_client(finish_reminder=mock_finish)
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            await finish_event("abc-789")
+        await finish_event(mock_client, "abc-789")
 
         mock_finish.assert_called_once_with("abc-789")
 
@@ -388,8 +367,7 @@ class TestFinishEvent:
         mock_client = _make_mock_sheets_client(
             finish_reminder=AsyncMock(side_effect=ValueError("bad id")),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await finish_event("bad")
+        result = await finish_event(mock_client, "bad")
 
         assert result.error == "bad id"
         assert result.text is None
@@ -399,8 +377,7 @@ class TestFinishEvent:
         mock_client = _make_mock_sheets_client(
             finish_reminder=AsyncMock(return_value=""),
         )
-        with patch("amaototyann.core.commands._get_sheets_client", return_value=mock_client):
-            result = await finish_event("x")
+        result = await finish_event(mock_client, "x")
 
         assert result.text == "の通知を終わるよ！"
         assert result.error is None
