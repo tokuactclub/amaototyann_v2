@@ -10,6 +10,6 @@ services:
         sync: false
       - key: DISCORD_BOT_TOKEN
         sync: false
-      - key: ADMIN_TOKEN
+      - key: ADMIN_PASSWORD
         sync: false
     healthCheckPath: /health

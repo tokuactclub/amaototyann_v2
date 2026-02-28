@@ -36,15 +36,15 @@ async def require_admin(
 ) -> None:
     """管理者権限を検証する依存関係.
 
-    settings.admin_token が None の場合はデバッグモードとして全アクセスを許可する。
+    settings.admin_password が None の場合はデバッグモードとして全アクセスを許可する。
     それ以外は Cookie の session_token を secrets.compare_digest で比較する。
     """
     settings = get_settings()
-    if settings.admin_token is None:
-        logger.debug("admin_token not configured — allowing access (debug mode)")
+    if settings.admin_password is None:
+        logger.debug("admin_password not configured — allowing access (debug mode)")
         return
 
-    if session_token is None or not secrets.compare_digest(session_token, settings.admin_token):
+    if session_token is None or not secrets.compare_digest(session_token, settings.admin_password):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
@@ -61,15 +61,15 @@ _AUTH = [Depends(require_admin)]
 async def login(body: dict[str, Any]) -> JSONResponse:
     """ログインエンドポイント.
 
-    JSON {"token": "..."} を受け取り、settings.admin_token と比較する。
+    JSON {"token": "..."} を受け取り、settings.admin_password と比較する。
     一致した場合は HttpOnly Cookie を発行する。
     """
     settings = get_settings()
     token: str = body.get("token", "")
 
-    if settings.admin_token is None:
-        # デバッグモード: トークン未設定時は常に成功
-        logger.debug("admin_token not configured — login always succeeds (debug mode)")
+    if settings.admin_password is None:
+        # デバッグモード: パスワード未設定時は常に成功
+        logger.debug("admin_password not configured — login always succeeds (debug mode)")
         response = JSONResponse({"ok": True})
         response.set_cookie(
             key=_SESSION_COOKIE,
@@ -79,14 +79,14 @@ async def login(body: dict[str, Any]) -> JSONResponse:
         )
         return response
 
-    if not token or not secrets.compare_digest(token, settings.admin_token):
+    if not token or not secrets.compare_digest(token, settings.admin_password):
         logger.warning("Login failed: invalid token")
         raise HTTPException(status_code=401, detail="Invalid token")
 
     response = JSONResponse({"ok": True})
     response.set_cookie(
         key=_SESSION_COOKIE,
-        value=settings.admin_token,
+        value=settings.admin_password,
         httponly=True,
         samesite="lax",
     )
