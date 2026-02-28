@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: amaototyann
+    runtime: docker
+    plan: free
+    envVars:
+      - key: IS_RENDER_SERVER
+        value: "True"
+      - key: GAS_URL
+        sync: false
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: ADMIN_TOKEN
+        sync: false
+    healthCheckPath: /health

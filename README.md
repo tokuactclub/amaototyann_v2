@@ -237,11 +237,32 @@ uv run pytest tests/ -v --cov --cov-report=html  # HTMLレポート
 ```
 
 ### Docker
+
+**3-Stage Multi-Platform Build:**
+- Stage 1: `node:22-slim` — React フロントエンド (TypeScript) をビルド
+- Stage 2: `python:3.12-slim` — Python 依存関係をインストール (uv 使用)
+- Stage 3: `python:3.12-slim` — runtime (frontend/dist + Python コード)
+
+**本番起動:**
 ```bash
-docker compose up app                    # 本番起動
-docker compose --profile dev up app-dev  # 開発モード
-docker build -t amaototyann .            # ビルドのみ
+docker compose up app  # ポート 8000 (backend のみ)
 ```
+
+**開発環境 (ホットリロード):**
+```bash
+docker compose --profile dev up  # backend (port 8000) + frontend dev (port 5173)
+```
+
+frontend-dev サービスは `npm run dev -- --host 0.0.0.0` で起動し、5173 ポートでホットリロード対応の開発サーバーを提供します。
+
+**ビルドのみ:**
+```bash
+docker build -t amaototyann .
+```
+
+**参考:**
+- `package-lock.json` は reproducible builds のため git で追跡
+- Render デプロイ用の blueprint は `render.yaml` を参照
 
 ### Pre-commit
 ```bash
@@ -254,3 +275,58 @@ GitHub Actions で以下を自動実行:
 - `ruff check` — リント
 - `ty check` — 型チェック（warning のみ）
 - `pytest --cov` — テスト + カバレッジ
+
+---
+
+## デプロイメント
+
+### Render へのデプロイ
+
+`render.yaml` Blueprint を使用して簡単にデプロイできます:
+
+1. [Render Dashboard](https://dashboard.render.com/) にログイン
+2. "Blueprint" → "Connect Repository" で本リポジトリを接続
+3. 以下の環境変数を設定:
+   - `GAS_URL` — Google Apps Script の Web アプリ URL
+   - `DISCORD_BOT_TOKEN` — Discord Bot トークン (オプション)
+   - `ADMIN_TOKEN` — 管理画面アクセストークン (オプション)
+   - `IS_RENDER_SERVER` — 自動で `True` に設定
+4. Deploy を実行
+
+Render は自動で Dockerfile の 3-stage build を実行し、本番環境で必要な依存関係のみを含むイメージをビルドします。
+
+---
+
+## 管理画面 (Admin Panel)
+
+スプレッドシートの代わりに、Web ブラウザから練習予定・リマインダーを管理できます。
+
+### アクセス
+
+- URL: `https://<your-server>/admin/`
+- 認証: 環境変数 `ADMIN_TOKEN` に設定したトークンでログイン
+
+### 機能
+
+- **練習予定**: 一覧表示・新規追加・削除
+- **リマインダー**: 一覧表示・新規追加・完了・削除
+- **Bot 設定**: Bot 情報の確認・グループ情報の編集
+
+### 環境変数
+
+| 変数名 | 必須 | 説明 |
+|--------|------|------|
+| `ADMIN_TOKEN` | いいえ | 管理画面のアクセストークン。未設定の場合は認証なし |
+
+### フロントエンドビルド
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+### GAS 側の設定
+
+管理画面から練習予定・リマインダーを追加するには、GAS に新しいコマンドを追加する必要があります。
+`docs/gas_commands.js` のコードを GAS のスクリプトエディタに貼り付けてデプロイしてください。

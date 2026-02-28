@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     discord_bot_token: str | None = None
     server_url: str | None = None
     is_render_server: bool = False
+    admin_token: str | None = None
 
     @property
     def is_debug(self) -> bool:

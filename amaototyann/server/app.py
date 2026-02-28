@@ -16,12 +16,14 @@ def create_app() -> FastAPI:
 
     # ルーターの登録
     from amaototyann.server.routes.admin import router as admin_router
+    from amaototyann.server.routes.api_admin import router as api_admin_router
     from amaototyann.server.routes.line import router as line_router
     from amaototyann.server.routes.push import router as push_router
 
     app.include_router(line_router)
     app.include_router(push_router)
     app.include_router(admin_router)
+    app.include_router(api_admin_router)
 
     # デバッグルーターの条件付きマウント
     try:
@@ -32,6 +34,11 @@ def create_app() -> FastAPI:
             app.include_router(debug_router, prefix="/debug")
     except Exception:
         pass
+
+    # SPA ルーターは最後に登録する（catch-all パターンが API ルートを奪わないように）
+    from amaototyann.server.routes.spa import router as spa_router
+
+    app.include_router(spa_router)
 
     return app
 
