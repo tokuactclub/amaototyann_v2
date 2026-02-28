@@ -34,6 +34,12 @@ async def health():
     }
 
 
+@router.get("/test")
+async def test():
+    """テストエンドポイント."""
+    return PlainTextResponse("test success", status_code=200)
+
+
 @router.get("/backupDatabase")
 async def backup_database():
     """データベースを GAS にバックアップするエンドポイント."""
