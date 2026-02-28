@@ -7,7 +7,8 @@ from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
 
 from amaototyann.config import get_settings
-from amaototyann.server.lifespan import bot_store, group_store, sheets_client
+from amaototyann.server import lifespan as _lifespan
+from amaototyann.server.lifespan import bot_store, group_store
 
 logger = logging.getLogger(__name__)
 
@@ -46,19 +47,19 @@ async def backup_database():
     if settings.is_debug:
         return PlainTextResponse("Backup skipped in debug mode")
 
-    if sheets_client is None:
+    if _lifespan.sheets_client is None:
         return PlainTextResponse("Sheets client not configured", status_code=503)
 
     results = []
 
     bot_data = await bot_store.dump_for_backup()
-    bot_ok = await sheets_client.set_bot_info(bot_data)
+    bot_ok = await _lifespan.sheets_client.set_bot_info(bot_data)
     if bot_ok:
         await bot_store.mark_clean()
     results.append(f"bot={'success' if bot_ok else 'error'}")
 
     group_data = await group_store.dump_for_backup()
-    group_ok = await sheets_client.set_group_info(group_data)
+    group_ok = await _lifespan.sheets_client.set_group_info(group_data)
     if group_ok:
         await group_store.mark_clean()
     results.append(f"group={'success' if group_ok else 'error'}")

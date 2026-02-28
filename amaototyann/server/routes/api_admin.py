@@ -17,7 +17,8 @@ from amaototyann.core.commands import (
 )
 from amaototyann.models.bot import BotInfo
 from amaototyann.models.schedule import PracticeCreate, ReminderCreate
-from amaototyann.server.lifespan import bot_store, group_store, sheets_client
+from amaototyann.server import lifespan as _lifespan
+from amaototyann.server.lifespan import bot_store, group_store
 
 logger = logging.getLogger(__name__)
 
@@ -133,9 +134,9 @@ async def get_practice() -> JSONResponse:
     Google Sheets から生の練習予定データをリストとして返す。
     """
     try:
-        if sheets_client is None:
+        if _lifespan.sheets_client is None:
             raise HTTPException(status_code=503, detail="SheetsClient not initialized")
-        events = await sheets_client.get_practice_events()
+        events = await _lifespan.sheets_client.get_practice_events()
         return JSONResponse(events)
     except HTTPException:
         raise
@@ -239,16 +240,16 @@ async def get_bots() -> JSONResponse:
 async def put_bots(body: list[dict[str, Any]]) -> JSONResponse:
     """Bot 情報を更新し、Google Sheets と bot_store を同期する."""
     try:
-        if sheets_client is None:
+        if _lifespan.sheets_client is None:
             raise HTTPException(status_code=503, detail="SheetsClient not initialized")
 
-        success = await sheets_client.set_bot_info(body)
+        success = await _lifespan.sheets_client.set_bot_info(body)
         if not success:
             raise HTTPException(status_code=500, detail="Failed to update bot info in Sheets")
         logger.info("set_bot_info Sheets response: success=%s", success)
 
         # Sheets から最新情報を再取得して bot_store をリロード
-        new_bot_data = await sheets_client.get_bot_info()
+        new_bot_data = await _lifespan.sheets_client.get_bot_info()
         if new_bot_data:
             new_bots = [
                 BotInfo(
@@ -300,10 +301,10 @@ async def put_group(body: dict[str, str]) -> JSONResponse:
         raise HTTPException(status_code=422, detail="id and groupName are required")
 
     try:
-        if sheets_client is None:
+        if _lifespan.sheets_client is None:
             raise HTTPException(status_code=503, detail="SheetsClient not initialized")
 
-        success = await sheets_client.set_group_info(body)
+        success = await _lifespan.sheets_client.set_group_info(body)
         if not success:
             raise HTTPException(status_code=500, detail="Failed to update group info in Sheets")
         logger.info("set_group_info Sheets response: success=%s", success)
