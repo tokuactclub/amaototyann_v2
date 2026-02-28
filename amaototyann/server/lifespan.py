@@ -4,6 +4,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
+import aiohttp
 from fastapi import FastAPI
 
 from amaototyann.config import get_settings
@@ -46,6 +47,29 @@ async def _backup_loop() -> None:
         await asyncio.sleep(60 * 3)
 
 
+async def _keep_alive_loop() -> None:
+    """Ping the health endpoint to keep Render free tier from sleeping."""
+    settings = get_settings()
+    if not settings.server_url or settings.is_debug:
+        logger.debug("Keep-alive loop disabled")
+        return
+
+    health_url = f"{settings.server_url}/health"
+    timeout = aiohttp.ClientTimeout(total=10)
+    while True:
+        try:
+            async with aiohttp.ClientSession() as session:
+                get_request = session.get(health_url, timeout=timeout)
+                async with get_request as response:
+                    if response.status == 200:
+                        logger.debug("Keep-alive ping successful")
+                    else:
+                        logger.warning("Keep-alive ping returned status %s", response.status)
+        except Exception as e:
+            logger.error("Keep-alive ping error: %s", e)
+        await asyncio.sleep(60 * 5)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """アプリケーションのライフサイクル管理."""
@@ -86,6 +110,11 @@ async def lifespan(app: FastAPI):
     backup_task = asyncio.create_task(_backup_loop())
     tasks.append(backup_task)
     logger.info("Backup loop started.")
+
+    # 6. Keep-alive ループの起動 (Render free tier でのスリープを防止)
+    keep_alive_task = asyncio.create_task(_keep_alive_loop())
+    tasks.append(keep_alive_task)
+    logger.info("Keep-alive loop started.")
 
     yield
 
