@@ -13,7 +13,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   })
 
   if (res.status === 401) {
-    window.location.href = '/admin/login'
     throw new Error('Unauthorized')
   }
 
