@@ -154,7 +154,7 @@ async def _send_remind_msg(
     """個別リマインダーメッセージを送信する."""
     embed = discord.Embed(colour=0x00B0F4)
     embed.add_field(
-        name=f"{event['job']} - 締め切りまで残り**{event['last_days']}**日",
+        name=f"{event['role']} - 締め切りまで残り**{event['last_days']}**日",
         value=f"{event['task']}<@{event['person']}>\n{event['memo']}",
         inline=False,
     )

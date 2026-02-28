@@ -33,6 +33,23 @@ def _derive_session_token(password: str) -> str:
     return hmac.new(_SESSION_SECRET, password.encode(), hashlib.sha256).hexdigest()
 
 
+def _require_sheets_client(request: Request):
+    """sheets_client が初期化済みであることを確認し、未初期化なら 503 を返す."""
+    client = request.app.state.sheets_client
+    if client is None:
+        raise HTTPException(status_code=503, detail="SheetsClient not initialized")
+    return client
+
+
+def _result_to_json(result, *, status_code: int = 200, log_prefix: str = "") -> JSONResponse:
+    """CommandResult をチェックし、エラーなら HTTPException を送出、成功なら JSONResponse を返す."""
+    if result.error:
+        if log_prefix:
+            logger.error("%s error: %s", log_prefix, result.error)
+        raise HTTPException(status_code=500, detail=result.error)
+    return JSONResponse({"ok": True, "message": result.text}, status_code=status_code)
+
+
 # ---------------------------------------------------------------------------
 # 認証ヘルパー
 # ---------------------------------------------------------------------------
@@ -71,35 +88,29 @@ async def login(body: dict[str, Any]) -> JSONResponse:
 
     JSON {"token": "..."} を受け取り、settings.admin_password と比較する。
     一致した場合は HttpOnly Cookie を発行する。
+    admin_password が未設定の場合はデバッグモードとして常に成功する。
     """
     settings = get_settings()
     token: str = body.get("token", "")
 
     if settings.admin_password is None:
-        # デバッグモード: パスワード未設定時は常に成功
         logger.debug("admin_password not configured — login always succeeds (debug mode)")
-        response = JSONResponse({"ok": True})
-        response.set_cookie(
-            key=_SESSION_COOKIE,
-            value="debug",
-            httponly=True,
-            samesite="lax",
-        )
-        return response
-
-    if not token or not secrets.compare_digest(token, settings.admin_password):
+        cookie_value = "debug"
+    elif not token or not secrets.compare_digest(token, settings.admin_password):
         logger.warning("Login failed: invalid token")
         raise HTTPException(status_code=401, detail="Invalid token")
+    else:
+        cookie_value = _derive_session_token(settings.admin_password)
 
+    logger.info("Admin login successful")
     response = JSONResponse({"ok": True})
     response.set_cookie(
         key=_SESSION_COOKIE,
-        value=_derive_session_token(settings.admin_password),
+        value=cookie_value,
         httponly=True,
         samesite="lax",
         max_age=86400,  # 24 hours
     )
-    logger.info("Admin login successful")
     return response
 
 
@@ -141,14 +152,10 @@ async def get_practice(request: Request) -> JSONResponse:
 
     Google Sheets から生の練習予定データをリストとして返す。
     """
+    sheets_client = _require_sheets_client(request)
     try:
-        sheets_client = request.app.state.sheets_client
-        if sheets_client is None:
-            raise HTTPException(status_code=503, detail="SheetsClient not initialized")
         events = await sheets_client.get_practice_events()
         return JSONResponse(events)
-    except HTTPException:
-        raise
     except Exception as err:
         logger.exception("get_practice error")
         raise HTTPException(status_code=500, detail="Internal server error") from err
@@ -165,20 +172,14 @@ async def post_practice(request: Request, body: PracticeCreate) -> JSONResponse:
         end_time=body.end_time,
         memo=body.memo,
     )
-    if result.error:
-        logger.error("add_practice error: %s", result.error)
-        raise HTTPException(status_code=500, detail=result.error)
-    return JSONResponse({"ok": True, "message": result.text}, status_code=201)
+    return _result_to_json(result, status_code=201, log_prefix="add_practice")
 
 
 @router.delete("/practice/{event_id}", dependencies=_AUTH)
 async def delete_practice(request: Request, event_id: str) -> JSONResponse:
     """練習予定を削除する."""
     result = await delete_event(request.app.state.sheets_client, event_id)
-    if result.error:
-        logger.error("delete_practice error: %s", result.error)
-        raise HTTPException(status_code=500, detail=result.error)
-    return JSONResponse({"ok": True, "message": result.text})
+    return _result_to_json(result, log_prefix="delete_practice")
 
 
 # ---------------------------------------------------------------------------
@@ -193,8 +194,7 @@ async def get_reminder(request: Request) -> JSONResponse:
     if result.error:
         logger.error("get_all_reminders error: %s", result.error)
         raise HTTPException(status_code=500, detail=result.error)
-    events = result.events if result.events is not None else []
-    return JSONResponse(events)
+    return JSONResponse(result.events or [])
 
 
 @router.post("/reminder", status_code=201, dependencies=_AUTH)
@@ -209,30 +209,21 @@ async def post_reminder(request: Request, body: ReminderCreate) -> JSONResponse:
         memo=body.memo,
         remind_date=body.remind_date,
     )
-    if result.error:
-        logger.error("add_reminder error: %s", result.error)
-        raise HTTPException(status_code=500, detail=result.error)
-    return JSONResponse({"ok": True, "message": result.text}, status_code=201)
+    return _result_to_json(result, status_code=201, log_prefix="add_reminder")
 
 
 @router.post("/reminder/{event_id}/finish", dependencies=_AUTH)
 async def finish_reminder(request: Request, event_id: str) -> JSONResponse:
     """リマインダーを完了済みにする."""
     result = await finish_event(request.app.state.sheets_client, event_id)
-    if result.error:
-        logger.error("finish_event error: %s", result.error)
-        raise HTTPException(status_code=500, detail=result.error)
-    return JSONResponse({"ok": True, "message": result.text})
+    return _result_to_json(result, log_prefix="finish_event")
 
 
 @router.delete("/reminder/{event_id}", dependencies=_AUTH)
 async def delete_reminder(request: Request, event_id: str) -> JSONResponse:
     """リマインダーを削除する."""
     result = await delete_event(request.app.state.sheets_client, event_id)
-    if result.error:
-        logger.error("delete_reminder error: %s", result.error)
-        raise HTTPException(status_code=500, detail=result.error)
-    return JSONResponse({"ok": True, "message": result.text})
+    return _result_to_json(result, log_prefix="delete_reminder")
 
 
 # ---------------------------------------------------------------------------
@@ -251,15 +242,11 @@ async def get_bots(request: Request) -> JSONResponse:
 async def put_bots(request: Request, body: list[dict[str, Any]]) -> JSONResponse:
     """Bot 情報を更新し、Google Sheets と bot_store を同期する."""
     try:
-        sheets_client = request.app.state.sheets_client
+        sheets_client = _require_sheets_client(request)
         bot_store = request.app.state.bot_store
-        if sheets_client is None:
-            raise HTTPException(status_code=503, detail="SheetsClient not initialized")
 
-        success = await sheets_client.set_bot_info(body)
-        if not success:
+        if not await sheets_client.set_bot_info(body):
             raise HTTPException(status_code=500, detail="Failed to update bot info in Sheets")
-        logger.info("set_bot_info Sheets response: success=%s", success)
 
         # Sheets から最新情報を再取得して bot_store をリロード
         new_bot_data = await sheets_client.get_bot_info()
@@ -270,7 +257,7 @@ async def put_bots(request: Request, body: list[dict[str, Any]]) -> JSONResponse
                     bot_name=row[1],
                     channel_access_token=row[2],
                     channel_secret=row[3],
-                    gpt_webhook_url=row[4],
+                    gpt_webhook_url=row[4] or None,
                     in_group=row[5].upper() == "TRUE",
                 )
                 for row in new_bot_data
@@ -314,15 +301,11 @@ async def put_group(request: Request, body: dict[str, str]) -> JSONResponse:
         raise HTTPException(status_code=422, detail="id and groupName are required")
 
     try:
-        sheets_client = request.app.state.sheets_client
+        sheets_client = _require_sheets_client(request)
         group_store = request.app.state.group_store
-        if sheets_client is None:
-            raise HTTPException(status_code=503, detail="SheetsClient not initialized")
 
-        success = await sheets_client.set_group_info(body)
-        if not success:
+        if not await sheets_client.set_group_info(body):
             raise HTTPException(status_code=500, detail="Failed to update group info in Sheets")
-        logger.info("set_group_info Sheets response: success=%s", success)
 
         await group_store.set_group_info(group_id=group_id, group_name=group_name)
         logger.info("group_store updated: %s (%s)", group_name, group_id)

@@ -32,12 +32,12 @@ async def push_message(request: Request):
     platform = request_json.get("platform", "line")
 
     if platform == "discord":
-        return await _handle_discord_push(cmd)
+        return await _handle_discord_push(request, cmd)
     else:
         return await _handle_line_push(request, cmd)
 
 
-async def _handle_discord_push(cmd: str) -> PlainTextResponse:
+async def _handle_discord_push(request: Request, cmd: str) -> PlainTextResponse:
     """Discord push message を処理する."""
     try:
         settings = get_settings()
@@ -47,11 +47,12 @@ async def _handle_discord_push(cmd: str) -> PlainTextResponse:
         from amaototyann.platforms.discord.bot import client as discord_client
         from amaototyann.platforms.discord.commands import broadcast_practice, broadcast_reminder
 
+        sheets_client = request.app.state.sheets_client
         cmd_name = cmd.lstrip("!")
         if cmd_name == "practice":
-            await broadcast_practice(discord_client)
+            await broadcast_practice(discord_client, sheets_client)
         elif cmd_name == "reminder":
-            await broadcast_reminder(discord_client)
+            await broadcast_reminder(discord_client, sheets_client)
         else:
             logger.error("Unknown Discord push command: %s", cmd_name)
             return PlainTextResponse("error", status_code=400)

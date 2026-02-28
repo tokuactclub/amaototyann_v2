@@ -28,15 +28,15 @@ async def get_practice_events(sheets_client: SheetsClient) -> CommandResult:
         if not isinstance(events, list):
             return CommandResult(error="Unexpected response from Sheets")
 
-        formatted = []
-        for x in events:
-            text = messages.PRACTICE.format(
+        formatted = [
+            messages.PRACTICE.format(
                 x["place"],
                 x["start"],
                 x["end"],
                 "\n" + x["memo"] if x["memo"] else "",
             )
-            formatted.append(text)
+            for x in events
+        ]
 
         if formatted:
             return CommandResult(text="\n\n".join(formatted))
@@ -61,17 +61,13 @@ async def get_reminder_events(
                 continue
 
             event["date"] = datetime.fromisoformat(event["date"].replace("Z", "+00:00"))
-            event["date"] = event["date"] + timedelta(days=1) - timedelta(seconds=1)
+            event["date"] += timedelta(days=1, seconds=-1)
 
             day_difference = _calculate_date_difference(event["date"])
             if day_difference < 0:
                 continue
 
-            target_dates: list[str] = []
-            if day_left is not None:
-                target_dates.append(day_left)
-            else:
-                target_dates = event["remindDate"].split(",")
+            target_dates = [day_left] if day_left is not None else event["remindDate"].split(",")
 
             if str(day_difference) in target_dates:
                 event["date"] = (

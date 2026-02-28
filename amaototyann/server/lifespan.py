@@ -22,23 +22,24 @@ async def _backup_loop(app: FastAPI) -> None:
         return
 
     settings = get_settings()
-    while True:
-        try:
-            if settings.is_debug:
-                logger.debug("Skipping backup in debug mode")
-            else:
-                if app.state.bot_store.is_dirty:
-                    data = await app.state.bot_store.dump_for_backup()
-                    if await app.state.sheets_client.set_bot_info(data):
-                        await app.state.bot_store.mark_clean()
+    if settings.is_debug:
+        logger.debug("Backup loop disabled in debug mode")
+        return
 
-                if app.state.group_store.is_dirty:
-                    data = await app.state.group_store.dump_for_backup()
-                    if await app.state.sheets_client.set_group_info(data):
-                        await app.state.group_store.mark_clean()
+    while True:
+        await asyncio.sleep(60 * 3)
+        try:
+            if app.state.bot_store.is_dirty:
+                data = await app.state.bot_store.dump_for_backup()
+                if await app.state.sheets_client.set_bot_info(data):
+                    await app.state.bot_store.mark_clean()
+
+            if app.state.group_store.is_dirty:
+                data = await app.state.group_store.dump_for_backup()
+                if await app.state.sheets_client.set_group_info(data):
+                    await app.state.group_store.mark_clean()
         except Exception as e:
             logger.error("Backup error: %s", e)
-        await asyncio.sleep(60 * 3)
 
 
 async def _keep_alive_loop() -> None:
@@ -115,7 +116,7 @@ async def lifespan(app: FastAPI):
         else:
             logger.warning("No group info loaded from Sheets")
 
-    # 4. Discord client の起動 (オプション)
+    # 5. Discord client の起動 (オプション)
     tasks: list[asyncio.Task] = []
     if settings.discord_bot_token:
         from amaototyann.platforms.discord.bot import client as discord_client
@@ -128,12 +129,12 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("DISCORD_BOT_TOKEN not set. Discord bot will not start.")
 
-    # 5. バックアップループの起動
+    # 6. バックアップループの起動
     backup_task = asyncio.create_task(_backup_loop(app))
     tasks.append(backup_task)
     logger.info("Backup loop started.")
 
-    # 6. Keep-alive ループの起動 (Render free tier でのスリープを防止)
+    # 7. Keep-alive ループの起動 (Render free tier でのスリープを防止)
     keep_alive_task = asyncio.create_task(_keep_alive_loop())
     tasks.append(keep_alive_task)
     logger.info("Keep-alive loop started.")
